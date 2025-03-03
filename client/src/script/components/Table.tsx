@@ -60,15 +60,13 @@ const Table = ({ data, columns, baseURL }: Props) => {
               <FaSearch size={22} />
             </div>
           </div>
-          {baseURL !== "/user-dashboard" && (
-            <div
-              onClick={() => navigate(`${baseURL}/create`)}
-              className="create-btn"
-            >
-              <FaPlus size={22} className="icon" />
-              <label>Tạo mới</label>
-            </div>
-          )}
+          <div
+            onClick={() => navigate(`${baseURL}/create`)}
+            className="create-btn"
+          >
+            <FaPlus size={22} className="icon" />
+            <label>Tạo mới</label>
+          </div>
         </div>
         <div className="table-container">
           <table>

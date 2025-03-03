@@ -44,17 +44,38 @@
 .create-btn {
   display: flex;
   align-items: center;
-  column-gap: 10px;
+  gap: 8px;
+  padding: 8px 16px;
+  background-color: #10b981;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 .create-btn label {
-  font-size: 22px;
-  color: #1f2937;
+  font-size: 14px;
+  color: white;
+  margin: 0;
+  cursor: pointer;
 }
 
-.icon {
-  color: #4b5563;
+.create-btn:hover {
+  background-color: #059669;
+  transform: translateY(-1px);
 }
+
+.create-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* .icon {
+  color: #4b5563;
+} */
 
 table {
   color: #1f2937;
@@ -118,7 +139,6 @@ td {
 }
 
 .search-bar .search-icon:hover,
-.create-btn:hover,
 .pagination-btn:hover {
   opacity: 0.7;
   background-color: #f8fafc;

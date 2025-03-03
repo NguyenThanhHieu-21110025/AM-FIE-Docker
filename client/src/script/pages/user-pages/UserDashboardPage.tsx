@@ -33,15 +33,6 @@ const UserDashboardPage = () => {
     <main className="dashboard-page" ref={mainRef}>
       <div className="dashboard-header">
         <div className="title">Danh Sách Người Dùng</div>
-        {admin && (
-          <button 
-            className="create-btn"
-            onClick={() => navigate("/user-dashboard/create")}
-          >
-            <FaPlus size={20} />
-            <span>Tạo tài khoản</span>
-          </button>
-        )}
       </div>
       {isLoading || !userList ? (
         <Loader />
