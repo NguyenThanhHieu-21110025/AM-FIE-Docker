@@ -185,11 +185,13 @@ const AddressInfoPage = () => {
             name="responsible_user"
             onChange={handleSelect}
             aria-placeholder="Chọn người chịu trách nhiệm"
+            value={formData.responsible_user || ""}
           >
+            <option value="">Không có người chịu trách nhiệm</option>
             {userList?.map((user) => (
-              <option
-                value={user._id}
-              >{`${user.name} - ${user.userid}`}</option>
+              <option key={user._id} value={user._id}>
+                {`${user.name} - ${user.userid}`}
+              </option>
             ))}
           </select>
         </div>

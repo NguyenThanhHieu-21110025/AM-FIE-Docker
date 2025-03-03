@@ -6,13 +6,10 @@ import { getUserList } from "../../interfaces/User";
 import { userTableColumns } from "../../utils/tableColumns";
 import Loader from "../../components/Loader";
 import { useAuth } from "../../context/AuthContext";
-import { useNavigate } from "react-router-dom";
-import { FaPlus } from "react-icons/fa";
 
 const UserDashboardPage = () => {
   const mainRef = useMainRef();
-  const navigate = useNavigate();
-  const { refreshAccessToken, accessToken, admin } = useAuth();
+  const { refreshAccessToken, accessToken } = useAuth();
   useScrollToMain();
 
   const { data: userList, isLoading } = useQuery({

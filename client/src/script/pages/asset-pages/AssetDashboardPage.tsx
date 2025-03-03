@@ -8,10 +8,13 @@ import Loader from "../../components/Loader";
 import { useAuth } from "../../context/AuthContext";
 import { getUserList, User } from "../../interfaces/User";
 import { Address, getAddressList } from "../../interfaces/Address";
+import { useState } from "react";
+
 
 const AssetDashboardPage = () => {
   const mainRef = useMainRef();
   const { refreshAccessToken, accessToken } = useAuth();
+  const [selectedRoom, setSelectedRoom] = useState<string>("");
   useScrollToMain();
 
   const { data: userList, isLoading: isLoadingUser } = useQuery({
@@ -58,9 +61,20 @@ const AssetDashboardPage = () => {
     enabled: !!addressList && addressList.length > 0,
   });
 
+  const filteredAssets = assetList?.filter(asset => {
+    if (!selectedRoom) return true; // Show all assets when no room is selected
+    
+    const selectedRoomIds = selectedRoom.split(",");
+    // Show asset if its location matches any of the selected rooms
+    return selectedRoomIds.includes(asset.location);
+  });
+
   return (
     <main className="dashboard-page" ref={mainRef}>
-      <div className="title">Danh Sách Tài Sản</div>
+      <div className="dashboard-header">
+        <div className="title">Danh Sách Tài Sản</div>
+      </div>
+
       {isLoadingAsset ||
       isLoadingAddress ||
       isLoadingUser ||
@@ -68,9 +82,11 @@ const AssetDashboardPage = () => {
         <Loader />
       ) : (
         <Table
-          data={assetList}
+          data={filteredAssets || assetList}
           columns={assetTableColumns}
           baseURL="/asset-dashboard"
+          addressList={addressList}
+          onRoomSelect={setSelectedRoom}
         />
       )}
     </main>
