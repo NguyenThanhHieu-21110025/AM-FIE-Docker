@@ -23,12 +23,12 @@ const historyItemSchema = new mongoose.Schema({
 const assetsSchema = new mongoose.Schema({
     asset_id: {
         type: String,
-        unique: true,
+        // unique: true,
         description: "Mã tài sản duy nhất"
     },
     asset_code: {
         type: String,
-        required: true,
+        // required: true,
         description: "số hiệu tài sản"},
     asset_name: {
         type: String,
@@ -37,35 +37,49 @@ const assetsSchema = new mongoose.Schema({
     },
     specifications: {
         type: String,
-        description: "Mô tả quy cách, đặc điểm của tài sản"
+        description: "Quy cách, đặc điểm của tài sản"
     },
     year_of_use: {
         type: Number,
-        required: true, // Đảm bảo năm sử dụng được cung cấp
-        description: "Năm bắt đầu sử dụng tài sản"
+        required: true, // Đảm bảo năm sử dụng được cung cấp, năm bắt đầu sử dụng
+        description: "Năm sử dụng"
     },
-    quantity: {
-        type: Number,
-        min: 0,
-        required: true,
-        description: "Số lượng"
+    accounting: {
+        quantity: {
+            type: Number,
+            min: 0,
+            required: true,
+            description: "Số lượng"
+        },
+        unit_price: {
+            type: Number,
+            min: 0,
+            required: true,
+            description: "Đơn giá"
+        },
+        origin_price: {
+            type: Number,
+            min: 0,
+            required: true,
+            description: "Nguyên giá"
+        }
     },
-    unit_price: {
-        type: Number,
-        min: 0,
-        required: true,
-        description: "Đơn giá của từng tài sản"
-    },
-    origin_price: {
-        type: Number,
-        min: 0,
-        required: true,
-        description: "Nguyên giá tổng cho tất cả tài sản cùng loại"
-    },
-    real_count: {
-        type: Number,
-        min: 0,
-        description: "Số lượng thực tế"
+    quantity_differential: {
+        real_count: {
+            type: Number,
+            // min: 0,
+            description: "KK thực tế"
+        },
+        surplus_quantity:{
+            type: Number,
+            // min: 0,
+            description: "SL Thừa"
+        },   
+        missing_quantity:{
+            type: Number,
+            // min: 0,
+            description: "SL Thiếu"
+        },
     },
     depreciation_rate: {
         type: Number,
@@ -76,7 +90,17 @@ const assetsSchema = new mongoose.Schema({
     remaining_value: {
         type: Number,
         min: 0,
-        description: "Nguyên giá còn lại sau khấu hao"
+        description: "Nguyên giá còn lại" //Nguyên giá còn lại sau khấu hao
+    },
+    suggested_disposal: {
+        type: String,
+        description: "Đề nghị thanh lý"
+    },
+    acquisition_source: { 
+        type: String, 
+        enum: ["Lẻ", "DA"], 
+        required: true, 
+        description: "Nguồn tài sản: Mua lẻ hoặc Dự án cung cấp"
     },
     location: {
         type: mongoose.Schema.Types.ObjectId,
@@ -86,12 +110,8 @@ const assetsSchema = new mongoose.Schema({
     responsible_user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        description: "Người phụ trách tài sản"
-    },
-    suggested_disposal: {
-        type: String,
-        description: "Thông tin về thanh lý"
-    },
+        description: "Người kiểm kê tài sản"
+    },   
     note: {
         type: String,
         description: "Ghi chú thêm"

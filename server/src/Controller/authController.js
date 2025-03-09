@@ -10,18 +10,19 @@ const authController = {
             const salt = await bcrypt.genSalt(10);
             const hashed = await bcrypt.hash(req.body.password, salt);
 
-            const newUser = await new User({
+            const newUser = new User({
                 name: req.body.name,
                 email: req.body.email,
                 password: hashed,
             });
 
             const user = await newUser.save();
-            res.status(200).json(user);
+            res.status(201).json(user);
         } catch (err) {
             res.status(500).json(err);
         }
     },
+
     generateAccessToken: (user) => {
         return jwt.sign(
             {
@@ -29,10 +30,11 @@ const authController = {
                 email: user.email,
                 admin: user.admin,
             },
-            process.env.JWT_SECRET, {
-            expiresIn: "2h",
-        });
+            process.env.JWT_SECRET,
+            { expiresIn: "2h" }
+        );
     },
+
     generateRefreshToken: (user) => {
         return jwt.sign(
             {
@@ -40,10 +42,11 @@ const authController = {
                 email: user.email,
                 admin: user.admin,
             },
-            process.env.JWT_REFRESH_SECRET, {
-            expiresIn: "365d",
-        });
+            process.env.JWT_REFRESH_SECRET,
+            { expiresIn: "365d" }
+        );
     },
+
     loginUser: async (req, res) => {
         try {
             const user = await User.findOne({ email: req.body.email });
@@ -58,11 +61,14 @@ const authController = {
     
             const accessToken = authController.generateAccessToken(user);
             const refreshToken = authController.generateRefreshToken(user);
-    
+
+            // Lưu refresh token vào mảng
             refreshTokens.push(refreshToken); 
-            res.cookie("refreshtoken", refreshToken, {
+
+            // Set cookie refresh token
+            res.cookie("refreshToken", refreshToken, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === "production", 
+                secure: process.env.NODE_ENV === "production",
                 path: "/",
                 sameSite: "strict",
             });
@@ -74,44 +80,64 @@ const authController = {
             res.status(500).json({ message: "Internal server error!" });
         }
     },
-    deleteUsers: async (req, res) => {
-        try{
-            const user = await User.findById(req.params.id);
-        }catch(err){
-            res.status(500).json(err);
-        }
-    },
+
     requestRefreshToken: async (req, res) => {
-        const refreshToken = req.cookies.refreshToken;
-        if (!refreshToken) return res.status(401).json("You're not authenticated");
-        if (!refreshTokens.includes(refreshToken)) {
-            return res.status(403).json("Refresh token is not valid");
-        }
-        jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, (err, user) => {
-            if (err) {
-                console.log(err);
-                return res.status(403).json("Invalid or expired refresh token");
+        try {
+            const refreshToken = req.cookies.refreshToken;
+            if (!refreshToken) {
+                return res.status(401).json("You're not authenticated");
             }
-            refreshTokens = refreshTokens.filter((token) => token !== refreshToken);
-            const newAccessToken = authController.generateAccessToken(user);
-            const newRefreshToken = authController.generateRefreshToken(user);
-            refreshTokens.push(newRefreshToken);
-            res.cookies("refreshToken", refreshToken, {
-                httpOnly: true,
-                secure: false,
-                path: "/",
-                sameSite: "strict",
+            if (!refreshTokens.includes(refreshToken)) {
+                return res.status(403).json("Refresh token is not valid");
+            }
+            jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, (err, user) => {
+                if (err) {
+                    console.log(err);
+                    return res.status(403).json("Invalid or expired refresh token");
+                }
+                // Xoá token cũ (nếu muốn vô hiệu hoá nó)
+                refreshTokens = refreshTokens.filter((token) => token !== refreshToken);
+
+                // Tạo token mới
+                const newAccessToken = authController.generateAccessToken(user);
+                const newRefreshToken = authController.generateRefreshToken(user);
+
+                // Thêm token mới
+                refreshTokens.push(newRefreshToken);
+
+                // Gửi lại cookie refresh token mới
+                res.cookie("refreshToken", newRefreshToken, {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === "production",
+                    path: "/",
+                    sameSite: "strict",
+                });
+                return res.status(200).json({ accessToken: newAccessToken });
             });
-            res.status(200).json({ accessToken: newAccessToken });
-        })
+        } catch (error) {
+            console.error("Error in requestRefreshToken:", error);
+            res.status(500).json("Internal server error");
+        }
     },
+
     userLogout: async (req, res) => {
-        res.clearCookie("refreshtoken");
+        res.clearCookie("refreshToken");
         refreshTokens = refreshTokens.filter((token) => token !== req.cookies.refreshToken);
         res.status(200).json("You logged out successfully");
     },
+
+    deleteUser: async (req, res) => {
+        try {
+            const user = await User.findById(req.params.id);
+            if (!user) {
+                return res.status(404).json({ message: "User not found" });
+            }
+            await user.remove();
+            res.status(200).json({ message: "User deleted successfully" });
+        } catch (err) {
+            res.status(500).json(err);
+        }
+    },
 };
-
-
 
 module.exports = authController;

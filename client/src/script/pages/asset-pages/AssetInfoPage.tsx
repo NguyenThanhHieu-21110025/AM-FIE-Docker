@@ -3,7 +3,6 @@ import { ReactNode, useEffect, useState } from "react";
 import {
   Asset,
   AssetRequest,
-  createAsset,
   deleteAsset,
   getAssetById,
   updateAsset,
@@ -78,27 +77,137 @@ const AssetInfoPage = () => {
     }
   }, [data]);
 
+  // Calculate remaining value whenever depreciation rate or origin price changes
+  useEffect(() => {
+    if (mode === "update") {
+      const originPrice = formData.accounting?.origin_price || 0;
+      const depreciationRate = formData.depreciation_rate || 0;
+      const remainingValue = originPrice * (1 - depreciationRate / 100);
+
+      setFormData((prev) => ({
+        ...prev,
+        remaining_value: remainingValue,
+        remaining_value_formatted: formatPrice(remainingValue),
+      }));
+    }
+  }, [formData.depreciation_rate, formData.accounting?.origin_price, mode]);
+
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) {
-    const { name } = e.target;
-    const value =
-      typeof e.target.value === "number"
-        ? Number(e.target.value)
-        : e.target.value;
-    if (e.target.className.includes("input-price")) {
-      const price = convertToNumber(value as string);
+    const { name, value } = e.target;
 
-      setFormData((prevState) => ({
-        ...prevState,
-        [name]: price,
-        [name + "_formatted"]: formatPrice(price),
+    // Handle price inputs
+    if (e.target.className.includes("input-price")) {
+      const numericPrice = convertToNumber(value);
+
+      switch (name) {
+        case "unit_price":
+          setFormData((prev) => ({
+            ...prev,
+            accounting: {
+              ...prev.accounting,
+              unit_price: numericPrice,
+              origin_price: numericPrice * (prev.accounting?.quantity || 0),
+            },
+            unit_price_formatted: formatPrice(numericPrice),
+            origin_price_formatted: formatPrice(
+              numericPrice * (prev.accounting?.quantity || 0)
+            ),
+          }));
+          break;
+
+        case "remaining_value":
+          setFormData((prev) => ({
+            ...prev,
+            remaining_value: numericPrice,
+            remaining_value_formatted: formatPrice(numericPrice),
+          }));
+          break;
+      }
+      return;
+    }
+
+    // Handle quantity inputs
+    if (name === "quantity") {
+      const quantity = Number(value);
+      const realCount = formData.quantity_differential?.real_count || 0;
+
+      // Calculate surplus/missing quantities
+      let surplusQuantity = 0;
+      let missingQuantity = 0;
+
+      if (realCount > quantity) {
+        surplusQuantity = realCount - quantity;
+      } else if (quantity > realCount) {
+        missingQuantity = quantity - realCount;
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        accounting: {
+          ...prev.accounting,
+          quantity,
+          origin_price: (prev.accounting?.unit_price || 0) * quantity,
+        },
+        quantity_differential: {
+          ...prev.quantity_differential,
+          real_count: realCount,
+          surplus_quantity: surplusQuantity,
+          missing_quantity: missingQuantity,
+        },
+        origin_price_formatted: formatPrice(
+          (prev.accounting?.unit_price || 0) * quantity
+        ),
       }));
-    } else setFormData((prevState) => ({ ...prevState, [name]: value }));
+      return;
+    }
+
+    if (name === "real_count") {
+      const real_count = Number(value);
+      const quantity = formData.accounting?.quantity || 0;
+
+      let surplusQuantity = 0;
+      let missingQuantity = 0;
+
+      if (real_count > quantity) {
+        surplusQuantity = real_count - quantity;
+        missingQuantity = 0;
+      } else if (quantity > real_count) {
+        surplusQuantity = 0;
+        missingQuantity = quantity - real_count;
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        quantity_differential: {
+          ...prev.quantity_differential,
+          real_count,
+          surplus_quantity: surplusQuantity,
+          missing_quantity: missingQuantity,
+        },
+      }));
+      return;
+    }
+
+    // Handle depreciation rate input
+    if (name === "depreciation_rate") {
+      const rate = Math.min(Math.max(parseFloat(value) || 0, 0), 100);
+      setFormData((prev) => ({
+        ...prev,
+        depreciation_rate: rate,
+      }));
+      return;
+    }
+
+    // Handle all other inputs
+    setFormData((prev) => ({ ...prev, [name]: value }));
   }
 
   function handleSelect(e: React.ChangeEvent<HTMLSelectElement>) {
-    if (e.target.name === "responsible_user") {
+    const { name, value } = e.target;
+
+    if (name === "responsible_user") {
       if (typeof userList === "undefined") return;
       const { name, _id } = userList.find(
         (user) => user._id === e.target.value
@@ -108,7 +217,7 @@ const AssetInfoPage = () => {
         responsible_user: _id,
         responsible_user_name: name,
       }));
-    } else if (e.target.name === "location") {
+    } else if (name === "location") {
       if (typeof addressList === "undefined") return;
       const { room_id, _id } = addressList.find(
         (address) => address._id === e.target.value
@@ -118,6 +227,11 @@ const AssetInfoPage = () => {
         location: _id,
         location_code: room_id,
       }));
+    } else if (name === "acquisition_source") {
+      setFormData((prev) => ({
+        ...prev,
+        acquisition_source: value as "Lẻ" | "DA",
+      }));
     }
   }
 
@@ -125,208 +239,355 @@ const AssetInfoPage = () => {
     e: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) {
     e.preventDefault();
-    let token = accessToken;
-    if (!token) {
-      token = await refreshAccessToken();
+    try {
+      let token = accessToken;
       if (!token) {
-        throw new Error("Unable to refresh access token");
+        token = await refreshAccessToken();
+        if (!token) {
+          throw new Error("Unable to refresh access token");
+        }
       }
-    }
 
-    const {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      unit_price_formatted,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      origin_price_formatted,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      remaining_value_formatted,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      responsible_user_name,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      responsible_user_userid,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      location_code,
-      ...filteredData
-    } = formData;
-    const assetRequest = { ...filteredData } as AssetRequest;
-    console.log(assetRequest);
-    const result = await updateAsset(id, assetRequest, token);
-    if (result) {
-      console.log("created address successfully");
-      navigate("/asset-dashboard");
-    } else console.log("failed to create address");
+      // Remove formatted and computed fields that we don't want to send to the server
+      const {
+        unit_price_formatted,
+        origin_price_formatted,
+        remaining_value_formatted,
+        responsible_user_name,
+        responsible_user_userid,
+        location_code,
+        ...filteredData
+      } = formData;
+      
+      // Validate required fields
+      if (!filteredData.asset_name) {
+        alert("Vui lòng nhập tên tài sản");
+        return;
+      }
+
+      if (!filteredData.accounting.quantity || filteredData.accounting.quantity <= 0) {
+        alert("Vui lòng nhập số lượng hợp lệ");
+        return;
+      }
+
+      if (!filteredData.accounting.unit_price || filteredData.accounting.unit_price <= 0) {
+        alert("Vui lòng nhập đơn giá hợp lệ");
+        return;
+      }
+      
+      const assetRequest = { ...filteredData } as AssetRequest;
+      const result = await updateAsset(id, assetRequest, token);
+      
+      if (result) {
+        alert("Cập nhật tài sản thành công");
+        setMode("info");
+      } else {
+        alert("Không thể cập nhật tài sản. Vui lòng thử lại!");
+      }
+    } catch (error) {
+      console.error("Error updating asset:", error);
+      alert("Đã xảy ra lỗi khi cập nhật tài sản");
+    }
   }
 
   async function handleDelete(
-    e:
-      | React.FormEvent<HTMLFormElement>
-      | React.MouseEvent<HTMLButtonElement, MouseEvent>
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) {
     e.preventDefault();
-    let token = accessToken;
-    if (!token) {
-      token = await refreshAccessToken();
-      if (!token) {
-        throw new Error("Unable to refresh access token");
-      }
+    if (!confirm("Bạn có chắc chắn muốn xóa tài sản này không?")) {
+      return;
     }
-    const result = await deleteAsset(id, token);
-    if (result) {
-      navigate("/asset-dashboard");
+    
+    try {
+      let token = accessToken;
+      if (!token) {
+        token = await refreshAccessToken();
+        if (!token) {
+          throw new Error("Unable to refresh access token");
+        }
+      }
+      const result = await deleteAsset(id, token);
+      if (result) {
+        alert("Xóa tài sản thành công");
+        navigate("/asset-dashboard");
+      } else {
+        alert("Không thể xóa tài sản. Vui lòng thử lại!");
+      }
+    } catch (error) {
+      console.error("Error deleting asset:", error);
+      alert("Đã xảy ra lỗi khi xóa tài sản");
     }
   }
 
   const UpdateMode = (): ReactNode => {
     return (
       <form className="info-body">
-        <div className="long-info">
-          <div className="info-header">ID tài sản: </div>
-          <input
-            type="text"
-            name="asset_id"
-            value={formData.asset_id}
-            onChange={handleChange}
-            readOnly
-          />
-        </div>
-        <div className="long-info">
-          <div className="info-header">Tên tài sản: </div>
-          <input
-            type="text"
-            name="asset_name"
-            value={formData.asset_name}
-            onChange={handleChange}
-          />
-        </div>
-        <div className="long-info">
-          <div className="info-header">Mã tài sản: </div>
-          <input
-            type="text"
-            name="asset_code"
-            value={formData.asset_code}
-            onChange={handleChange}
-          />
-        </div>
-        <div className="normal-info">
-          <div className="info-container">
-            <div className="info-header">Năm sử dụng:</div>
-            <input
-              type="number"
-              name="year_of_use"
-              value={formData.year_of_use}
-              onChange={handleChange}
-            />
+        {/* Row 1: Tên tài sản và mã tài sản trên cùng một hàng */}
+        <div className="two-column-row">
+          <div className="column">
+            <div className="info-container">
+              <div className="info-header">
+                Tên tài sản: <span className="required">*</span>
+              </div>
+              <input
+                type="text"
+                name="asset_name"
+                value={formData.asset_name || ""}
+                onChange={handleChange}
+                required
+              />
+            </div>
           </div>
+          <div className="column">
+            <div className="info-container">
+              <div className="info-header">Mã tài sản: </div>
+              <input
+                type="text"
+                name="asset_code"
+                value={formData.asset_code || ""}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Row 2: Quy cách chiếm 2/3 và năm sử dụng chiếm 1/3 */}
+        <div className="two-column-row uneven">
+          <div className="column wide">
+            <div className="info-container">
+              <div className="info-header">Quy cách, đặc điểm tài sản: </div>
+              <textarea
+                name="specifications"
+                value={formData.specifications || ""}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+          <div className="column narrow">
+            <div className="info-container">
+              <div className="info-header">
+                Năm sử dụng: <span className="required">*</span>
+              </div>
+              <input
+                type="number"
+                name="year_of_use"
+                value={formData.year_of_use || ""}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ACCOUNTING SECTION - with clear heading and visual distinction */}
+        <div className="section-divider">
+          <h3 className="section-title">Theo sổ kế toán</h3>
+        </div>
+
+        <div className="normal-info accounting-section">
+          {/* Accounting Quantity */}
           <div className="info-container">
-            <div className="info-header">Số lượng:</div>
+            <div className="info-header">
+              Số lượng: <span className="required">*</span>
+            </div>
             <input
               type="number"
               name="quantity"
-              value={formData.quantity}
+              value={formData.accounting?.quantity || 0}
               onChange={handleChange}
+              required
+              min="0"
             />
           </div>
+
+          {/* Unit Price */}
           <div className="info-container">
-            <div className="info-header">Đơn giá (đơn vị: VNĐ):</div>
+            <div className="info-header">
+              Đơn giá (VNĐ): <span className="required">*</span>
+            </div>
             <input
               type="text"
               name="unit_price"
               className="input-price"
-              value={formData.unit_price_formatted}
+              value={
+                formData.unit_price_formatted ||
+                formatPrice(formData.accounting?.unit_price || 0)
+              }
               onChange={handleChange}
+              required
             />
           </div>
+
+          {/* Origin Price */}
           <div className="info-container">
-            <div className="info-header">Nguyên giá (đơn vị: VNĐ):</div>
+            <div className="info-header">Nguyên giá (VNĐ):</div>
             <input
               type="text"
               name="origin_price"
               className="input-price"
-              value={formData.origin_price_formatted}
-              onChange={handleChange}
+              value={
+                formData.origin_price_formatted ||
+                formatPrice(formData.accounting?.origin_price || 0)
+              }
+              disabled
             />
           </div>
+        </div>
+
+        {/* DIFFERENTIAL SECTION - with clear heading and visual distinction */}
+        <div className="section-divider">
+          <h3 className="section-title">Chênh lệch</h3>
+        </div>
+
+        <div className="normal-info differential-section">
+          {/* Actual Count */}
           <div className="info-container">
-            <div className="info-header">Số lượng thực tế:</div>
+            <div className="info-header">KK thực tế:</div>
             <input
               type="number"
               name="real_count"
-              value={formData.real_count}
+              value={formData.quantity_differential?.real_count || 0}
               onChange={handleChange}
+              min="0"
             />
           </div>
+
+          {/* Surplus Quantity */}
           <div className="info-container">
-            <div className="info-header">Phần trăm hao mòn (đơn vị: %):</div>
+            <div className="info-header">SL thừa:</div>
+            <input
+              type="number"
+              name="surplus_quantity"
+              value={formData.quantity_differential?.surplus_quantity || 0}
+              disabled
+            />
+          </div>
+
+          {/* Missing Quantity */}
+          <div className="info-container">
+            <div className="info-header">SL thiếu:</div>
+            <input
+              type="number"
+              name="missing_quantity"
+              value={formData.quantity_differential?.missing_quantity || 0}
+              disabled
+            />
+          </div>
+        </div>
+
+        {/* DEPRECIATION SECTION */}
+        <div className="section-divider">
+          <h3 className="section-title">Khấu hao</h3>
+        </div>
+
+        <div className="normal-info depreciation-section">
+          {/* Depreciation Rate */}
+          <div className="info-container">
+            <div className="info-header">Tỷ lệ hao mòn (%):</div>
             <input
               type="number"
               name="depreciation_rate"
-              value={formData.depreciation_rate}
+              value={formData.depreciation_rate || 0}
               onChange={handleChange}
+              min="0"
+              max="100"
             />
           </div>
+
+          {/* Remaining Value */}
           <div className="info-container">
-            <div className="info-header">Nguyên giá còn lại (đơn vị: VNĐ):</div>
+            <div className="info-header">Giá trị còn lại (VNĐ):</div>
             <input
               type="text"
               name="remaining_value"
               className="input-price"
-              value={formData.remaining_value_formatted}
-              onChange={handleChange}
+              value={
+                formData.remaining_value_formatted ||
+                formatPrice(formData.remaining_value || 0)
+              }
+              disabled
             />
           </div>
+
+          {/* Asset Status */}
           <div className="info-container">
             <div className="info-header">Đề nghị thanh lý:</div>
             <input
-              type="suggested_disposal"
-              name="position"
-              value={formData.suggested_disposal}
+              type="text"
+              name="suggested_disposal"
+              value={formData.suggested_disposal || ""}
               onChange={handleChange}
             />
           </div>
+        </div>
+
+        {/* OTHER INFORMATION SECTION */}
+        <div className="section-divider">
+          <h3 className="section-title">Thông tin khác</h3>
+        </div>
+
+        <div className="normal-info">
+          {/* Acquisition Source */}
+          <div className="info-container">
+            <div className="info-header">
+              Nguồn hình thành: <span className="required">*</span>
+            </div>
+            <select
+              name="acquisition_source"
+              onChange={handleSelect}
+              value={formData.acquisition_source || "Lẻ"}
+              required
+            >
+              <option value="Lẻ">Lẻ</option>
+              <option value="DA">Dự án</option>
+            </select>
+          </div>
+
+          {/* Location */}
           <div className="info-container">
             <div className="info-header">Địa chỉ phòng: </div>
             <select
-              id="dropdown"
               name="location"
               onChange={handleSelect}
-              aria-placeholder="Chọn địa chỉ phòng"
+              value={formData.location || ""}
             >
+              <option value="">Chọn địa chỉ phòng</option>
               {addressList?.map((address) => (
-                <option value={address._id}>{address.room_id}</option>
+                <option key={address._id} value={address._id}>
+                  {address.room_id} - {address.name}
+                </option>
               ))}
             </select>
           </div>
+
+          {/* Responsible User */}
           <div className="info-container">
             <div className="info-header">Người chịu trách nhiệm: </div>
             <select
-              id="dropdown"
-              className="dropdown"
               name="responsible_user"
               onChange={handleSelect}
-              aria-placeholder="Chọn người chịu trách nhiệm"
               value={formData.responsible_user || ""}
             >
-              <option value="">Không có người đại diện</option>
+              <option value="">Chọn người chịu trách nhiệm</option>
               {userList?.map((user) => (
                 <option key={user._id} value={user._id}>
-                  {`${user.name} - ${user.userid}`}
+                  {`${user.name} - ${user.userid || ""}`}
                 </option>
               ))}
             </select>
           </div>
         </div>
+
+        {/* Notes */}
         <div className="long-info">
-          <div className="info-header">Quy cách, đặc điểm tài sản: </div>
+          <div className="info-header">Ghi chú: </div>
           <textarea
-            name="specifications"
-            value={formData.specifications}
+            name="note"
+            value={formData.note || ""}
             onChange={handleChange}
           />
         </div>
-        <div className="long-info">
-          <div className="info-header">Ghi chú: </div>
-          <textarea name="note" value={formData.note} onChange={handleChange} />
-        </div>
+
         <div className="button-container">
           <button className="submit-btn" onClick={handleSubmit}>
             Lưu thông tin
@@ -342,69 +603,128 @@ const AssetInfoPage = () => {
   const InfoMode = (): ReactNode => {
     return (
       <div className="info-body">
-        <div className="long-info">
-          <div className="info-header">ID tài sản: </div>
-          <p>{formData.asset_id}</p>
-        </div>
-        <div className="long-info">
-          <div className="info-header">Tên tài sản: </div>
-          <p>{formData.asset_name}</p>
-        </div>
-        <div className="long-info">
-          <div className="info-header">Mã tài sản: </div>
-          <p>{formData.asset_code}</p>
-        </div>
-        <div className="normal-info">
-          <div className="info-container">
-            <div className="info-header">Năm sử dụng:</div>
-            <p>{formData.year_of_use}</p>
+        {/* Row 1: Tên tài sản và mã tài sản trên cùng một hàng */}
+        <div className="two-column-row">
+          <div className="column">
+            <div className="info-container">
+              <div className="info-header">Tên tài sản:</div>
+              <p>{formData.asset_name || "Chưa có thông tin"}</p>
+            </div>
           </div>
+          <div className="column">
+            <div className="info-container">
+              <div className="info-header">Mã tài sản:</div>
+              <p>{formData.asset_code || "Chưa có thông tin"}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Row 2: Quy cách chiếm 2/3 và năm sử dụng chiếm 1/3 */}
+        <div className="two-column-row uneven">
+          <div className="column wide">
+            <div className="info-container">
+              <div className="info-header">Quy cách, đặc điểm tài sản:</div>
+              <p>{formData.specifications || "Không có"}</p>
+            </div>
+          </div>
+          <div className="column narrow">
+            <div className="info-container">
+              <div className="info-header">Năm sử dụng:</div>
+              <p>{formData.year_of_use}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ACCOUNTING SECTION */}
+        <div className="section-divider">
+          <h3 className="section-title">Theo sổ kế toán</h3>
+        </div>
+
+        <div className="normal-info accounting-section">
           <div className="info-container">
             <div className="info-header">Số lượng:</div>
-            <p>{formData.quantity}</p>
+            <p>{formData.accounting?.quantity || 0}</p>
           </div>
           <div className="info-container">
-            <div className="info-header">Đơn giá (đơn vị: VNĐ):</div>
-            <p>{formData.unit_price_formatted}</p>
+            <div className="info-header">Đơn giá (VNĐ):</div>
+            <p>{formData.unit_price_formatted || formatPrice(formData.accounting?.unit_price || 0)}</p>
           </div>
           <div className="info-container">
-            <div className="info-header">Nguyên giá (đơn vị: VNĐ):</div>
-            <p>{formData.origin_price_formatted}</p>
+            <div className="info-header">Nguyên giá (VNĐ):</div>
+            <p>{formData.origin_price_formatted || formatPrice(formData.accounting?.origin_price || 0)}</p>
+          </div>
+        </div>
+
+        {/* DIFFERENTIAL SECTION */}
+        <div className="section-divider">
+          <h3 className="section-title">Chênh lệch</h3>
+        </div>
+
+        <div className="normal-info differential-section">
+          <div className="info-container">
+            <div className="info-header">KK thực tế:</div>
+            <p>{formData.quantity_differential?.real_count || 0}</p>
           </div>
           <div className="info-container">
-            <div className="info-header">Số lượng thực tế:</div>
-            <p>{formData.real_count || "0"}</p>
+            <div className="info-header">SL thừa:</div>
+            <p>{formData.quantity_differential?.surplus_quantity || 0}</p>
           </div>
           <div className="info-container">
-            <div className="info-header">Phần trăm hao mòn (đơn vị: %):</div>
-            <p>{formData.depreciation_rate || "0"}</p>
+            <div className="info-header">SL thiếu:</div>
+            <p>{formData.quantity_differential?.missing_quantity || 0}</p>
+          </div>
+        </div>
+
+        {/* DEPRECIATION SECTION */}
+        <div className="section-divider">
+          <h3 className="section-title">Khấu hao</h3>
+        </div>
+
+        <div className="normal-info depreciation-section">
+          <div className="info-container">
+            <div className="info-header">Tỷ lệ hao mòn (%):</div>
+            <p>{formData.depreciation_rate || 0}</p>
           </div>
           <div className="info-container">
-            <div className="info-header">Nguyên giá còn lại (đơn vị: VNĐ):</div>
-            <p>{formData.remaining_value_formatted || "0"}</p>
+            <div className="info-header">Giá trị còn lại (VNĐ):</div>
+            <p>{formData.remaining_value_formatted || formatPrice(formData.remaining_value || 0)}</p>
           </div>
           <div className="info-container">
             <div className="info-header">Đề nghị thanh lý:</div>
             <p>{formData.suggested_disposal || "Không có"}</p>
           </div>
+        </div>
+
+        {/* OTHER INFORMATION SECTION */}
+        <div className="section-divider">
+          <h3 className="section-title">Thông tin khác</h3>
+        </div>
+
+        <div className="normal-info">
           <div className="info-container">
-            <div className="info-header">Địa chỉ phòng: </div>
+            <div className="info-header">Nguồn hình thành:</div>
+            <p>{formData.acquisition_source || "Không có thông tin"}</p>
+          </div>
+          <div className="info-container">
+            <div className="info-header">Địa chỉ phòng:</div>
             <p>{formData.location_code || "Không có"}</p>
           </div>
           <div className="info-container">
-            <div className="info-header">Người chịu trách nhiệm: </div>
-            <p>{`${formData.responsible_user_name} - ${
-              userList?.find((user) => user._id === formData.responsible_user)
-                ?.userid
-            }`}</p>
+            <div className="info-header">Người chịu trách nhiệm:</div>
+            <p>
+              {formData.responsible_user_name
+                ? `${formData.responsible_user_name} - ${
+                    userList?.find((user) => user._id === formData.responsible_user)
+                      ?.userid || ""
+                  }`
+                : "Không có"}
+            </p>
           </div>
         </div>
+
+        {/* Notes */}
         <div className="long-info">
-          <div className="info-header">Quy cách, đặc điểm tài sản: </div>
-          <p>{formData.specifications || "Không có"}</p>
-        </div>
-        <div className="long-info">
-          <div className="info-header">Ghi chú: </div>
+          <div className="info-header">Ghi chú:</div>
           <p>{formData.note || "Không có"}</p>
         </div>
 

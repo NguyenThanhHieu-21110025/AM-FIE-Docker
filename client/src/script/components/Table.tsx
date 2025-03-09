@@ -113,7 +113,6 @@ const Table = ({
 
           {/* Action Buttons */}
           <div className="button-group">
-            {/* Room Search Button - Only for Asset Dashboard */}
             {isAssetDashboard && addressList && (
               <button
                 className="search-btn"
@@ -123,8 +122,6 @@ const Table = ({
                 <span>Tìm theo phòng</span>
               </button>
             )}
-
-            {/* Create New Button */}
             <div
               onClick={() => navigate(`${baseURL}/create`)}
               className="create-btn"
@@ -145,6 +142,7 @@ const Table = ({
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
+                      colSpan={header.colSpan} // Add colSpan for grouped headers
                       onClick={header.column.getToggleSortingHandler()}
                     >
                       {!header.isPlaceholder && (
@@ -201,13 +199,14 @@ const Table = ({
                 </tr>
               ))}
             </tbody>
-            <tfoot />
+
+            {/* Table Footer */}
+            <tfoot/>
           </table>
         </div>
 
         {/* Pagination */}
         <div className="pagination">
-          {/* First Page */}
           <button
             className="pagination-btn"
             onClick={() => table.setPageIndex(0)}
@@ -215,8 +214,6 @@ const Table = ({
           >
             {"<<"}
           </button>
-
-          {/* Previous Page */}
           <button
             className="pagination-btn"
             onClick={() => table.previousPage()}
@@ -224,8 +221,6 @@ const Table = ({
           >
             {"<"}
           </button>
-
-          {/* Page Numbers */}
           {Array.from({ length: table.getPageCount() }, (_, index) => (
             <button
               key={index}
@@ -235,8 +230,6 @@ const Table = ({
               {index + 1}
             </button>
           ))}
-
-          {/* Next Page */}
           <button
             className="pagination-btn"
             onClick={() => table.nextPage()}
@@ -244,8 +237,6 @@ const Table = ({
           >
             {">"}
           </button>
-
-          {/* Last Page */}
           <button
             className="pagination-btn"
             onClick={() => table.setPageIndex(table.getPageCount() - 1)}
@@ -253,8 +244,6 @@ const Table = ({
           >
             {">>"}
           </button>
-
-          {/* Page Info */}
           <span className="page-number">
             <div>Trang</div>
             <strong>

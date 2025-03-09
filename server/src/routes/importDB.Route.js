@@ -5,6 +5,6 @@ const upload = multer({ dest: 'uploads/' });
 const router = require("express").Router();
 
 
-router.post("/import", upload.single("file"), importRouter.importCSV);
+router.post("/import", upload.single("file"), importRouter.importFile);
 
 module.exports = router;

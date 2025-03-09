@@ -1,15 +1,11 @@
 export interface Column {
   header: string;
-  accessorKey: string;
+  accessorKey?: string; // Optional, since grouped columns won't have an accessorKey
   footer: string;
+  columns?: Column[]; // Add support for sub-columns
 }
 
 export const assetTableColumns: Column[] = [
-  {
-    header: "Mã tài sản",
-    accessorKey: "asset_id",
-    footer: "Mã tài sản",
-  },
   {
     header: "Số hiệu tài sản",
     accessorKey: "asset_code",
@@ -31,34 +27,56 @@ export const assetTableColumns: Column[] = [
     footer: "Năm sử dụng",
   },
   {
-    header: "Số lượng",
-    accessorKey: "quantity",
-    footer: "Số Lượng",
+    header: "Theo sổ kế toán", // Grouped header for accounting
+    footer: "Theo sổ kế toán",
+    columns: [
+      {
+        header: "Số lượng",
+        accessorKey: "accounting.quantity",
+        footer: "Số Lượng",
+      },
+      {
+        header: "Đơn Giá",
+        accessorKey: "unit_price_formatted",
+        footer: "Đơn Giá",
+      },
+      {
+        header: "Nguyên giá",
+        accessorKey: "origin_price_formatted",
+        footer: "Nguyên giá",
+      },
+    ],
   },
   {
-    header: "Đơn Giá",
-    accessorKey: "unit_price_formatted",
-    footer: "Đơn Giá",
+    header: "Chênh lệch", // Grouped header for quantity_differential
+    footer: "Chênh lệch",
+    columns: [
+      {
+        header: "Số lượng thực tế",
+        accessorKey: "quantity_differential.real_count",
+        footer: "Số lượng thực tế",
+      },
+      {
+        header: "Số lượng thừa",
+        accessorKey: "quantity_differential.surplus_quantity",
+        footer: "Số lượng thừa",
+      },
+      {
+        header: "Số lượng thiếu",
+        accessorKey: "quantity_differential.missing_quantity",
+        footer: "Số lượng thiếu",
+      },
+    ],
   },
   {
-    header: "Nguyên giá",
-    accessorKey: "origin_price_formatted",
-    footer: "Nguyên giá",
-  },
-  {
-    header: "Số lượng thực tế",
-    accessorKey: "real_count",
-    footer: "Nguyên giá",
-  },
-  {
-    header: "Phầm trăm hao mòn",
+    header: "Phần trăm hao mòn",
     accessorKey: "depreciation_rate",
-    footer: "Phầm trăm hao mòn",
+    footer: "Phần trăm hao mòn",
   },
   {
-    header: "Nguyên giá còn lại",
+    header: "Giá trị còn lại",
     accessorKey: "remaining_value_formatted",
-    footer: "Nguyên giá còn lại",
+    footer: "Giá trị còn lại",
   },
   {
     header: "Địa chỉ phòng",
@@ -69,6 +87,11 @@ export const assetTableColumns: Column[] = [
     header: "Người phụ trách",
     accessorKey: "responsible_user_name",
     footer: "Người phụ trách",
+  },
+  {
+    header: "Nguồn hình thành",
+    accessorKey: "acquisition_source",
+    footer: "Nguồn hình thành",
   },
   {
     header: "Đề nghị thanh lý",

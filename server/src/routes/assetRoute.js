@@ -9,6 +9,6 @@ router.post("/", middlewareController.verifyToken, assetController.createAsset);
 router.put("/:id", middlewareController.verifyToken, assetController.updateAsset);
 router.delete("/:id", middlewareController.verifyToken, assetController.deleteAsset);
 router.get("/user/:responsible_user", middlewareController.verifyToken, assetController.getAllAssetsByUser);
-router.post("/:id/history", middlewareController.verifyToken, assetController.createHistory);
+router.post("/:id/history", middlewareController.verifyToken, assetController.addHistoryItem);
 
 module.exports = router;

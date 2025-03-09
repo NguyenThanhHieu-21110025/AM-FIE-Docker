@@ -1,94 +1,158 @@
+/* ========== 1. VARIABLES ========== */
+:root {
+  /* Colors */
+  --color-background: #f8fafc;
+  --color-white: #ffffff;
+  --color-text-primary: #1f2937;
+  --color-text-secondary: #4b5563;
+  --color-text-tertiary: #6b7280;
+  
+  /* Section Colors */
+  --color-accounting: #f0f9ff;
+  --color-accounting-border: #3b82f6;
+  --color-differential: #f0fdf4;
+  --color-differential-border: #10b981;
+  --color-depreciation: #fef2f2;
+  --color-depreciation-border: #ef4444;
+  
+  /* Button Colors */
+  --color-green: #10b981;
+  --color-green-dark: #059669;
+  --color-blue: #60a5fa;
+  --color-blue-dark: #3b82f6;
+  --color-red: #f87171;
+  --color-red-dark: #ef4444;
+  --color-gray: #9ca3af;
+  --color-gray-dark: #6b7280;
+  --color-yellow: #fbbf24;
+  --color-yellow-dark: #f59e0b;
+  
+  /* Border Colors */
+  --color-border: #e5e7eb;
+  
+  /* Spacing */
+  --spacing-small: 8px;
+  --spacing-medium: 16px;
+  --spacing-large: 20px;
+  --spacing-xl: 32px;
+  
+  /* Border Radius */
+  --radius-small: 8px;
+  --radius-medium: 12px;
+  --radius-large: 16px;
+}
+
+/* ========== 2. BASE LAYOUT ========== */
 .info-page {
   min-height: 100vh;
-  height: fit-content;
   width: 100%;
-  background-color: #f8fafc;  
+  background-color: var(--color-background);
   padding: 80px 0;
 }
 
 .info-page .container {
   width: 1200px;
-  max-width: 90%; 
+  max-width: 90%;
   padding: 40px;
-  background-color: white;  
+  background-color: var(--color-white);
   color: #333;
-  border-radius: 16px;
+  border-radius: var(--radius-large);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
   margin: auto;
   height: fit-content;
   transition: all 0.3s ease;
 }
 
-.normal-info {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); 
-  gap: 20px;
-  width: 100%;
-}
-
-.info-page .info-container {
-  padding: 16px;
-  background-color: #f8fafc;
-  border-radius: 12px;
-  transition: all 0.3s ease;
-  width: 100%; /* Added to ensure full width in grid */
-}
-.info-page .back-button {
-  display: flex;
-  align-items: center;
-  width: fit-content;
-  gap: 8px;
-  font-size: 16px;
-  color: #4b5563;  
-  cursor: pointer;
-  transition: color 0.3s ease;
-  padding: 8px 16px;
-  border-radius: 8px;
-}
-
-.info-page .back-button:hover {
-  color: #1f2937;
-  background-color: #f1f5f9;
-}
-
+/* ========== 3. TYPOGRAPHY ========== */
 .info-page .title {
   text-align: center;
   font-size: 32px;
   font-weight: 600;
-  color: #1f2937; 
-  margin-bottom: 32px;
-}
-
-.info-body {
-  font-size: 16px;
-  font-weight: 700;
-  padding: 0 32px;
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-xl);
 }
 
 .info-page .info-header {
-  color: #6b7280;
+  color: var(--color-text-tertiary);
   font-weight: 500;
   margin-bottom: 4px;
 }
 
-.info-page .long-info {
-  display: grid;
-  grid-template-columns: 200px 1fr; 
-  gap: 16px;
-  align-items: center;
-  padding: 16px;
-  background-color: #f8fafc;
-  border-radius: 12px;
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin: 0;
 }
 
+.required {
+  color: var(--color-red-dark);
+  font-weight: bold;
+}
+
+/* ========== 4. GRID AND LAYOUTS ========== */
+.info-body {
+  font-size: 16px;
+  font-weight: 700;
+  padding: 0 var(--spacing-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+  animation: fadeIn 0.3s ease;
+}
+
+/* Standard 3-column grid */
+.normal-info {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-large);
+  width: 100%;
+}
+
+/* 2-column layout */
+.two-column-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-large);
+  width: 100%;
+  margin-bottom: var(--spacing-large);
+}
+
+/* 2-column layout with 2:1 ratio */
+.two-column-row.uneven {
+  grid-template-columns: 2fr 1fr;
+}
+
+.two-column-row .column {
+  width: 100%;
+}
+
+/* Full-width row with label and content */
+.info-page .long-info {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: var(--spacing-medium);
+  align-items: center;
+  padding: var(--spacing-medium);
+  background-color: var(--color-background);
+  border-radius: var(--radius-medium);
+}
+
+/* Section dividers */
+.section-divider {
+  grid-column: 1 / -1;
+  margin: 24px 0 12px 0;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--spacing-small);
+}
+
+/* ========== 5. FORM ELEMENTS ========== */
 .info-page .info-container {
-  padding: 16px;
-  background-color: #f8fafc;
-  border-radius: 12px;
+  padding: var(--spacing-medium);
+  background-color: var(--color-background);
+  border-radius: var(--radius-medium);
   transition: all 0.3s ease;
+  width: 100%;
 }
 
 .info-page .info-container:hover {
@@ -97,15 +161,19 @@
   background-color: #f1f5f9;
 }
 
+.two-column-row .column .info-container {
+  height: 100%;
+}
+
 .info-page input,
 .info-page select,
 .info-page textarea {
-  background-color: white;
-  color: #1f2937;
+  background-color: var(--color-white);
+  color: var(--color-text-primary);
   font-size: 16px;
   padding: 8px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
   width: 100%;
   transition: all 0.3s ease;
 }
@@ -114,114 +182,151 @@
 .info-page select:focus,
 .info-page textarea:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: var(--color-blue-dark);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.info-page .button-container {
-  padding: 32px 0;
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
+.info-page input[readonly] {
+  background-color: var(--color-background);
+  color: var(--color-text-tertiary);
+  cursor: not-allowed;
 }
 
+/* Textarea specific styles */
+.two-column-row .column textarea {
+  min-height: 100px;
+}
+
+/* ========== 6. SECTION STYLES ========== */
+/* Base section styles */
+.accounting-section,
+.differential-section,
+.depreciation-section {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-large);
+  padding: var(--spacing-large);
+  border-radius: var(--radius-medium);
+  margin-bottom: var(--spacing-medium);
+}
+
+/* Specific section styles */
+.accounting-section {
+  background-color: var(--color-accounting);
+  border-left: 4px solid var(--color-accounting-border);
+}
+
+.differential-section {
+  background-color: var(--color-differential);
+  border-left: 4px solid var(--color-differential-border);
+}
+
+.depreciation-section {
+  background-color: var(--color-depreciation);
+  border-left: 4px solid var(--color-depreciation-border);
+}
+
+/* ========== 7. BUTTON STYLES ========== */
+/* Button container */
+.info-page .button-container {
+  padding: var(--spacing-xl) 0;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-medium);
+}
+
+/* Common button styles */
 .info-page .button-container button {
   padding: 10px 24px;
-  border-radius: 8px;
+  border-radius: var(--radius-small);
   font-size: 16px;
   font-weight: 500;
   transition: all 0.3s ease;
   border: none;
-  color: white;
+  color: var(--color-white);
 }
 
+/* Submit button */
 .info-page .submit-btn {
-  background-color: #10b981;  /* Lighter green */
+  background-color: var(--color-green);
 }
 
 .info-page .submit-btn:hover {
-  background-color: #059669;
+  background-color: var(--color-green-dark);
 }
 
+/* Update button */
 .info-page .update-btn {
-  background-color: #60a5fa;  /* Lighter blue */
+  background-color: var(--color-blue);
 }
 
 .info-page .update-btn:hover {
-  background-color: #3b82f6;
+  background-color: var(--color-blue-dark);
 }
 
+/* Delete button */
 .info-page .delete-btn {
-  background-color: #f87171;  /* Lighter red */
+  background-color: var(--color-red);
 }
 
 .info-page .delete-btn:hover {
-  background-color: #ef4444;
+  background-color: var(--color-red-dark);
 }
 
+/* Cancel button */
 .info-page .cancel-btn {
-  background-color: #9ca3af;  /* Lighter gray */
+  background-color: var(--color-gray);
 }
 
 .info-page .cancel-btn:hover {
-  background-color: #6b7280;
+  background-color: var(--color-gray-dark);
 }
 
+/* Status button */
 .info-page .status-btn {
-  margin-top: 16px;
+  margin-top: var(--spacing-medium);
   padding: 8px 20px;
-  border-radius: 8px;
+  border-radius: var(--radius-small);
   font-size: 14px;
-  background-color: #fbbf24;  /* Lighter yellow */
-  color: white;
+  background-color: var(--color-yellow);
+  color: var(--color-white);
   border: none;
   transition: all 0.3s ease;
 }
 
 .info-page .status-btn:hover {
-  background-color: #f59e0b;
+  background-color: var(--color-yellow-dark);
   transform: translateY(-1px);
 }
 
-.info-page input[readonly] {
-  background-color: #f8fafc;
-  color: #6b7280;
-  cursor: not-allowed;
+/* Back button */
+.info-page .back-button {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  gap: var(--spacing-small);
+  font-size: 16px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color 0.3s ease;
+  padding: 8px 16px;
+  border-radius: var(--radius-small);
 }
 
-/* Status indicator styles */
+.info-page .back-button:hover {
+  color: var(--color-text-primary);
+  background-color: #f1f5f9;
+}
+
+/* ========== 8. STATUS INDICATORS ========== */
 .info-page .status-indicator {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-small);
 }
 
-/* Animation for mode switching */
-.info-body {
-  animation: fadeIn 0.3s ease;
-}
-
-@media (max-width: 1280px) {
-  .info-page .container {
-    width: 95%;
-  }
-  
-  .normal-info {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  }
-}
-
-@media (max-width: 768px) {
-  .info-page .long-info {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-  
-  .normal-info {
-    grid-template-columns: 1fr;
-  }
-}
-
+/* ========== 9. ANIMATIONS ========== */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -230,5 +335,44 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* ========== 10. MEDIA QUERIES ========== */
+/* Large screens */
+@media (max-width: 1280px) {
+  .info-page .container {
+    width: 95%;
+  }
+  
+  .normal-info,
+  .accounting-section,
+  .differential-section,
+  .depreciation-section {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Small screens */
+@media (max-width: 768px) {
+  .info-page .long-info {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-small);
+  }
+  
+  .normal-info,
+  .accounting-section,
+  .differential-section,
+  .depreciation-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .two-column-row,
+  .two-column-row.uneven {
+    grid-template-columns: 1fr;
+  }
+  
+  .two-column-row .column + .column {
+    margin-top: var(--spacing-large);
   }
 }
