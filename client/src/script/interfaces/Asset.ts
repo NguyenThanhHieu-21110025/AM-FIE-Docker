@@ -40,10 +40,10 @@ export interface Asset {
 
 
 export interface AssetRequest {
-  asset_id: string;
-  asset_code: string;
+  asset_id?: string;
+  asset_code?: string;
   asset_name: string;
-  specifications: string;
+  specifications?: string;
   year_of_use: number;
   accounting: {
     quantity: number;
@@ -57,11 +57,11 @@ export interface AssetRequest {
   };
   depreciation_rate: number;
   remaining_value: number;
-  location: string;
-  responsible_user: string;
-  suggested_disposal: string;
+  suggested_disposal?: string;
   acquisition_source: "Lẻ" | "DA";
-  note: string;
+  location?: string;
+  responsible_user?: string;
+  note?: string;
 }
 
 const HANDLE_ASSET_URL = import.meta.env.VITE_API_URL + "/asset";
@@ -118,21 +118,28 @@ export async function getAssetById(id: string, token: string) {
 // Update createAsset function
 export async function createAsset(asset: AssetRequest, token: string) {
   try {
-    const requestInit: RequestInit = {
+    const response = await fetch(HANDLE_ASSET_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        // Sửa từ Authorization thành token để phù hợp với middleware
         token: `Bearer ${token}`,
       },
       body: JSON.stringify(asset),
-    };
+    });
     
-    const res = await fetch(`${HANDLE_ASSET_URL}`, requestInit);
-    const data = await res.json();
-    return res.ok;
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw { 
+        status: response.status, 
+        response: { data: errorData } 
+      };
+    }
+    
+    return await response.json();
   } catch (error) {
-    console.error(error);
-    return false;
+    console.error("Error in createAsset:", error);
+    throw error;
   }
 }
 

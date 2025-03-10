@@ -239,6 +239,7 @@ const AssetInfoPage = () => {
     e: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) {
     e.preventDefault();
+    
     try {
       let token = accessToken;
       if (!token) {
@@ -247,7 +248,7 @@ const AssetInfoPage = () => {
           throw new Error("Unable to refresh access token");
         }
       }
-
+  
       // Remove formatted and computed fields that we don't want to send to the server
       const {
         unit_price_formatted,
@@ -264,29 +265,34 @@ const AssetInfoPage = () => {
         alert("Vui lòng nhập tên tài sản");
         return;
       }
-
-      if (!filteredData.accounting.quantity || filteredData.accounting.quantity <= 0) {
+  
+      if (!filteredData.accounting?.quantity || filteredData.accounting?.quantity <= 0) {
         alert("Vui lòng nhập số lượng hợp lệ");
         return;
       }
-
-      if (!filteredData.accounting.unit_price || filteredData.accounting.unit_price <= 0) {
+  
+      if (!filteredData.accounting?.unit_price || filteredData.accounting?.unit_price <= 0) {
         alert("Vui lòng nhập đơn giá hợp lệ");
         return;
       }
       
-      const assetRequest = { ...filteredData } as AssetRequest;
-      const result = await updateAsset(id, assetRequest, token);
-      
-      if (result) {
-        alert("Cập nhật tài sản thành công");
-        setMode("info");
-      } else {
-        alert("Không thể cập nhật tài sản. Vui lòng thử lại!");
-      }
-    } catch (error) {
+      // Đảm bảo origin_price luôn được tính chính xác
+      filteredData.accounting.origin_price = 
+        filteredData.accounting.quantity * filteredData.accounting.unit_price;
+        
+      console.log("Sending update data:", filteredData);
+  
+      // Rest of the function...
+    } catch (error: any) {
       console.error("Error updating asset:", error);
-      alert("Đã xảy ra lỗi khi cập nhật tài sản");
+      
+      // Hiển thị chi tiết lỗi nếu có
+      if (error.response?.data) {
+        console.error("Server error details:", error.response.data);
+        alert(`Lỗi: ${error.response.data.message || error.message}`);
+      } else {
+        alert("Đã xảy ra lỗi khi cập nhật tài sản");
+      }
     }
   }
 

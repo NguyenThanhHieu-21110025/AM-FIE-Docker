@@ -226,10 +226,16 @@ const CreateAssetPage = () => {
     e.preventDefault();
 
     try {
-      const token = (await refreshAccessToken()) || accessToken;
-      if (!token) throw new Error("Unable to refresh access token");
+      // Đảm bảo token luôn có giá trị
+      let token = accessToken;
+      if (!token) {
+        token = await refreshAccessToken();
+      }
+      if (!token) {
+        throw new Error("Không thể xác thực. Vui lòng đăng nhập lại.");
+      }
 
-      // Remove formatted and computed fields that we don't want to send to the server
+      // Loại bỏ các trường formatting và computed
       const {
         _id,
         __v,
@@ -250,32 +256,45 @@ const CreateAssetPage = () => {
       }
 
       if (
-        !requestData.accounting.quantity ||
-        requestData.accounting.quantity <= 0
+        !requestData.accounting?.quantity ||
+        requestData.accounting?.quantity <= 0
       ) {
         alert("Vui lòng nhập số lượng hợp lệ");
         return;
       }
 
       if (
-        !requestData.accounting.unit_price ||
-        requestData.accounting.unit_price <= 0
+        !requestData.accounting?.unit_price ||
+        requestData.accounting?.unit_price <= 0
       ) {
         alert("Vui lòng nhập đơn giá hợp lệ");
         return;
       }
 
+      // Đảm bảo origin_price luôn được tính chính xác
+      requestData.accounting.origin_price =
+        requestData.accounting.quantity * requestData.accounting.unit_price;
+
+      // Log dữ liệu trước khi gửi để kiểm tra
+      console.log("Token being used:", token.substring(0, 20) + "...");
+
       const result = await createAsset(requestData as AssetRequest, token);
 
       if (result) {
-        console.log("Asset created successfully");
         navigate("/asset-dashboard");
       } else {
         alert("Không thể tạo tài sản. Vui lòng thử lại!");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating asset:", error);
-      alert("Đã xảy ra lỗi khi tạo tài sản");
+
+      // Hiển thị chi tiết lỗi nếu có
+      if (error.response?.data) {
+        console.error("Server error details:", error.response.data);
+        alert(`Lỗi: ${error.response.data.message || error.message}`);
+      } else {
+        alert("Đã xảy ra lỗi khi tạo tài sản");
+      }
     }
   }
 
