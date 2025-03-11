@@ -106,54 +106,181 @@ export const assetTableColumns: Column[] = [
 ];
 
 export const userTableColumns: Column[] = [
+  // Thông tin cá nhân
   {
-    header: "ID người dùng",
-    accessorKey: "userid",
-    footer: "ID người dùng",
+    header: "Thông tin cá nhân",
+    footer: "Thông tin cá nhân",
+    columns: [
+      {
+        header: "ID người dùng",
+        accessorKey: "userid",
+        footer: "ID người dùng",
+      },
+      {
+        header: "Tên người dùng",
+        accessorKey: "name",
+        footer: "Tên người dùng",
+      },
+    ]
   },
+  
+  // Thông tin liên hệ
   {
-    header: "Tên người dùng",
-    accessorKey: "name",
-    footer: "Tên người dùng",
+    header: "Thông tin liên hệ",
+    footer: "Thông tin liên hệ",
+    columns: [
+      {
+        header: "Email",
+        accessorKey: "email",
+        footer: "Email",
+      },
+      {
+        header: "Số điện thoại",
+        accessorKey: "phoneNumber",
+        footer: "Số điện thoại",
+      },
+    ]
   },
+  
+  // Thông tin công việc
   {
-    header: "Email",
-    accessorKey: "email",
-    footer: "Email",
+    header: "Thông tin công việc",
+    footer: "Thông tin công việc",
+    columns: [
+      { 
+        header: "Loại tài khoản", 
+        accessorKey: "role", 
+        footer: "Loại tài khoản" 
+      },
+      {
+        header: "Chức vụ",
+        accessorKey: "position",
+        footer: "Chức vụ",
+      },
+      { 
+        header: "Trạng thái", 
+        accessorKey: "status", 
+        footer: "Trạng thái" 
+      },
+    ]
   },
-  {
-    header: "Số điện thoại",
-    accessorKey: "phoneNumber",
-    footer: "Số điện thoại",
-  },
-  { header: "Loại tài khoản", accessorKey: "role", footer: "Loại tài khoản" },
-  {
-    header: "Chức vụ",
-    accessorKey: "position",
-    footer: "Chức vụ",
-  },
-  { header: "Trạng thái", accessorKey: "status", footer: "Trạng thái" },
 ];
 
 export const addressTableColumns: Column[] = [
   {
-    header: "Mã phòng",
-    accessorKey: "room_id",
-    footer: "Mã phòng",
+    header: "Thông tin chung",
+    footer: "Thông tin chung",
+    columns: [
+      {
+        header: "Mã phòng",
+        accessorKey: "room_id",
+        footer: "Mã phòng",
+      },
+      {
+        header: "Tên phòng",
+        accessorKey: "name",
+        footer: "Tên phòng",
+      },
+      {
+        header: "Tên tòa nhà",
+        accessorKey: "building",
+        footer: "Tên tòa nhà",
+      },
+      {
+        header: "Người phụ trách",
+        accessorKey: "responsible_user_name",
+        footer: "Người phụ trách",
+      },
+    ],
   },
+
   {
-    header: "Tên phòng",
-    accessorKey: "name",
-    footer: "Tên phòng",
+    header: "Theo sổ kế toán",
+    footer: "Theo sổ kế toán",
+    columns: [
+      {
+        header: "Số lượng",
+        accessorKey: "accountingRecords.quantity",
+        footer: "Số lượng",
+      },
+      {
+        header: "Nguyên giá",
+        accessorKey: "accountingRecords.originalValue",
+        footer: "Nguyên giá",
+      },
+      {
+        header: "Giá trị còn lại",
+        accessorKey: "accountingRecords.currentValue",
+        footer: "Giá trị còn lại",
+      },
+    ],
   },
+
   {
-    header: "Tên tòa nhà",
-    accessorKey: "building",
-    footer: "Tên tòa nhà",
+    header: "Kiểm kê thực tế",
+    footer: "Kiểm kê thực tế",
+    columns: [
+      {
+        header: "Số lượng",
+        accessorKey: "physicalCount.quantity",
+        footer: "Số lượng",
+      },
+      {
+        header: "Nguyên giá",
+        accessorKey: "physicalCount.originalValue",
+        footer: "Nguyên giá",
+      },
+      {
+        header: "Giá trị còn lại",
+        accessorKey: "physicalCount.currentValue",
+        footer: "Giá trị còn lại",
+      },
+    ],
   },
+
   {
-    header: "Người phụ trách",
-    accessorKey: "responsible_user_name",
-    footer: "Người phụ trách",
+    header: "Chênh lệch",
+    footer: "Chênh lệch",
+    columns: [
+      {
+        header: "Số lượng",
+        accessorKey: "discrepancy.quantity",
+        footer: "Số lượng",
+      },
+      {
+        header: "Nguyên giá",
+        accessorKey: "discrepancy.originalValue",
+        footer: "Nguyên giá",
+      },
+      {
+        header: "Giá trị còn lại",
+        accessorKey: "discrepancy.currentValue",
+        footer: "Giá trị còn lại",
+      },
+    ],
+  },
+
+  {
+    header: "Lý do chênh lệch",
+    footer: "Lý do chênh lệch",
+    columns: [
+      {
+        header: "Thất lạc",
+        accessorKey: "reason.lost",
+        footer: "Thất lạc",
+      },
+      {
+        header: "Thanh lý",
+        accessorKey: "reason.disposed",
+        footer: "Thanh lý",
+      },
+    ],
+  },
+
+  // Ghi chú
+  {
+    header: "Ghi chú",
+    accessorKey: "note",
+    footer: "Ghi chú",
   },
 ];

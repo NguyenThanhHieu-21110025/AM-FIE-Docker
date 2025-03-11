@@ -13,7 +13,7 @@ import {
   deleteAddress,
   getAddressById,
   updateAddress,
-} from "../../interfaces/Address";
+} from "../../interfaces/Room";
 
 const AddressInfoPage = () => {
   const [formData, setFormData] = useState<Address>({} as Address);

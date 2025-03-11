@@ -1,5 +1,5 @@
 import { formatPrice } from "../utils/formatPrice";
-import { Address } from "./Address";
+import { Address } from "./Room";
 import { User } from "./User";
 
 // Định nghĩa các type con để cải thiện khả năng đọc

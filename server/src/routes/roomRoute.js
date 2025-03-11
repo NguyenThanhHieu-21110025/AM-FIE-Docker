@@ -1,7 +1,7 @@
 // routes/addressRoutes.js
 const express = require('express');
 const router = express.Router();
-const roomController = require("../Controller/addressController");
+const roomController = require("../Controller/roomController");
 const middlewareController = require("../middleware/middleware");
 
 router.post('/', middlewareController.verifyToken, roomController.createAddress);   

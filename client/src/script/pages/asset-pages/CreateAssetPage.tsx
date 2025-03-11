@@ -11,7 +11,7 @@ import { useMainRef, useScrollToMain } from "../../context/MainRefContext";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { getUserList, User } from "../../interfaces/User";
-import { Address, getAddressList } from "../../interfaces/Address";
+import { Address, getAddressList } from "../../interfaces/Room";
 import { useQuery } from "@tanstack/react-query";
 import { FaAngleLeft } from "react-icons/fa";
 import Loader from "../../components/Loader";

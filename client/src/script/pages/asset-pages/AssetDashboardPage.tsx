@@ -7,7 +7,7 @@ import { assetTableColumns } from "../../utils/tableColumns";
 import Loader from "../../components/Loader";
 import { useAuth } from "../../context/AuthContext";
 import { getUserList, User } from "../../interfaces/User";
-import { Address, getAddressList } from "../../interfaces/Address";
+import { Address, getAddressList } from "../../interfaces/Room";
 import { useState } from "react";
 
 

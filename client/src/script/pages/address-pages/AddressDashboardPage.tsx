@@ -5,7 +5,7 @@ import Table from "../../components/Table";
 import { addressTableColumns } from "../../utils/tableColumns";
 import Loader from "../../components/Loader";
 import { useAuth } from "../../context/AuthContext";
-import { getAddressList } from "../../interfaces/Address";
+import { getAddressList } from "../../interfaces/Room";
 import { getUserList, User } from "../../interfaces/User";
 
 const AddressDashboardPage = () => {

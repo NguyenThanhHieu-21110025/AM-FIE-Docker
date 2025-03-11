@@ -8,7 +8,7 @@ import {
   Address,
   AddressRequest,
   createAddress,
-} from "../../interfaces/Address";
+} from "../../interfaces/Room";
 import { useQuery } from "@tanstack/react-query";
 import { getUserList, User } from "../../interfaces/User";
 import Loader from "../../components/Loader";

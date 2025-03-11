@@ -14,7 +14,7 @@ import { FilterSidebar } from "./FilterSideBar";
 import { Link, useNavigate } from "react-router-dom";
 import { Column } from "../utils/tableColumns";
 import { useLocation } from "react-router-dom";
-import { Address } from "../interfaces/Address";
+import { Address } from "../interfaces/Room";
 import Modal from "./Modal";
 
 interface Props {

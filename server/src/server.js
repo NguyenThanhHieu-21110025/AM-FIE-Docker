@@ -7,7 +7,7 @@ const cookieParser = require('cookie-parser');
 
 const assetRoutes = require('./routes/assetRoute');
 const userRoutes = require('./routes/userRoute');
-const addressRoutes = require('./routes/addressRoute');
+const roomRoutes = require('./routes/roomRoute');
 const authRoutes = require('./routes/authRoute'); 
 const importRouter = require('./routes/importDB.Route');
 const exportRouter = require('./routes/exportDB.Route');
@@ -35,7 +35,7 @@ app.use(cookieParser());
 
 app.use('/api/asset', assetRoutes); 
 app.use('/api/user', userRoutes); 
-app.use('/api/addresses', addressRoutes); 
+app.use('/api/addresses', roomRoutes); 
 app.use('/api/import', importRouter);
 app.use('/api/export', exportRouter);
 app.use('/api/auth', authRoutes);
