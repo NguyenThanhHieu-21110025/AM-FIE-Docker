@@ -84,9 +84,9 @@ export const assetTableColumns: Column[] = [
     footer: "Địa chỉ phòng",
   },
   {
-    header: "Người phụ trách",
+    header: "Người kiểm kê tài sản",
     accessorKey: "responsible_user_name",
-    footer: "Người phụ trách",
+    footer: "Người kiểm kê tài sản",
   },
   {
     header: "Nguồn hình thành",

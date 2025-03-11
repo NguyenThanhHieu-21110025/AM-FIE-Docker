@@ -64,9 +64,15 @@ const AssetDashboardPage = () => {
   const filteredAssets = assetList?.filter(asset => {
     if (!selectedRoom) return true; // Show all assets when no room is selected
     
-    const selectedRoomIds = selectedRoom.split(",");
+    const selectedRoomIds = selectedRoom ? selectedRoom.split(",") : [];
+    
+    // Handle both object and string types
+    const locationId = typeof asset.location === 'object' 
+      ? asset.location?._id ?? '' 
+      : asset.location ?? '';
+      
     // Show asset if its location matches any of the selected rooms
-    return selectedRoomIds.includes(asset.location);
+    return selectedRoomIds.includes(locationId);
   });
 
   return (

@@ -92,6 +92,20 @@ const AssetInfoPage = () => {
     }
   }, [formData.depreciation_rate, formData.accounting?.origin_price, mode]);
 
+  const getLocationId = (location: any): string => {
+    if (typeof location === "object" && location !== null) {
+      return location._id || "";
+    }
+    return location || "";
+  };
+
+  const getUserId = (user: any): string => {
+    if (typeof user === "object" && user !== null) {
+      return user._id || "";
+    }
+    return user || "";
+  };
+
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) {
@@ -239,7 +253,7 @@ const AssetInfoPage = () => {
     e: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) {
     e.preventDefault();
-    
+  
     try {
       let token = accessToken;
       if (!token) {
@@ -251,41 +265,68 @@ const AssetInfoPage = () => {
   
       // Remove formatted and computed fields that we don't want to send to the server
       const {
+        _id,
+        __v,
         unit_price_formatted,
         origin_price_formatted,
         remaining_value_formatted,
         responsible_user_name,
         responsible_user_userid,
         location_code,
+        history,
         ...filteredData
       } = formData;
-      
+  
       // Validate required fields
       if (!filteredData.asset_name) {
         alert("Vui lòng nhập tên tài sản");
         return;
       }
   
-      if (!filteredData.accounting?.quantity || filteredData.accounting?.quantity <= 0) {
+      if (
+        !filteredData.accounting?.quantity ||
+        filteredData.accounting?.quantity <= 0
+      ) {
         alert("Vui lòng nhập số lượng hợp lệ");
         return;
       }
   
-      if (!filteredData.accounting?.unit_price || filteredData.accounting?.unit_price <= 0) {
+      if (
+        !filteredData.accounting?.unit_price ||
+        filteredData.accounting?.unit_price <= 0
+      ) {
         alert("Vui lòng nhập đơn giá hợp lệ");
         return;
       }
-      
-      // Đảm bảo origin_price luôn được tính chính xác
-      filteredData.accounting.origin_price = 
-        filteredData.accounting.quantity * filteredData.accounting.unit_price;
-        
-      console.log("Sending update data:", filteredData);
   
-      // Rest of the function...
+      // Đảm bảo origin_price luôn được tính chính xác
+      filteredData.accounting.origin_price =
+        filteredData.accounting.quantity * filteredData.accounting.unit_price;
+  
+      // Đảm bảo location và responsible_user là string ID
+      const assetRequest: AssetRequest = {
+        ...filteredData,
+        location: getLocationId(filteredData.location),
+        responsible_user: getUserId(filteredData.responsible_user),
+      };
+  
+      console.log("Sending update data:", assetRequest);
+  
+      // Gọi API để cập nhật tài sản
+      const success = await updateAsset(id, assetRequest, token);
+  
+      if (success) {
+        alert("Cập nhật tài sản thành công");
+        setMode("info");
+        
+        // Tải lại trang để hiển thị dữ liệu mới
+        window.location.reload();
+      } else {
+        alert("Không thể cập nhật tài sản. Vui lòng thử lại!");
+      }
     } catch (error: any) {
       console.error("Error updating asset:", error);
-      
+  
       // Hiển thị chi tiết lỗi nếu có
       if (error.response?.data) {
         console.error("Server error details:", error.response.data);
@@ -303,7 +344,7 @@ const AssetInfoPage = () => {
     if (!confirm("Bạn có chắc chắn muốn xóa tài sản này không?")) {
       return;
     }
-    
+
     try {
       let token = accessToken;
       if (!token) {
@@ -555,7 +596,7 @@ const AssetInfoPage = () => {
             <select
               name="location"
               onChange={handleSelect}
-              value={formData.location || ""}
+              value={getLocationId(formData.location)}
             >
               <option value="">Chọn địa chỉ phòng</option>
               {addressList?.map((address) => (
@@ -572,7 +613,7 @@ const AssetInfoPage = () => {
             <select
               name="responsible_user"
               onChange={handleSelect}
-              value={formData.responsible_user || ""}
+              value={getUserId(formData.responsible_user)}
             >
               <option value="">Chọn người chịu trách nhiệm</option>
               {userList?.map((user) => (
@@ -653,11 +694,17 @@ const AssetInfoPage = () => {
           </div>
           <div className="info-container">
             <div className="info-header">Đơn giá (VNĐ):</div>
-            <p>{formData.unit_price_formatted || formatPrice(formData.accounting?.unit_price || 0)}</p>
+            <p>
+              {formData.unit_price_formatted ||
+                formatPrice(formData.accounting?.unit_price || 0)}
+            </p>
           </div>
           <div className="info-container">
             <div className="info-header">Nguyên giá (VNĐ):</div>
-            <p>{formData.origin_price_formatted || formatPrice(formData.accounting?.origin_price || 0)}</p>
+            <p>
+              {formData.origin_price_formatted ||
+                formatPrice(formData.accounting?.origin_price || 0)}
+            </p>
           </div>
         </div>
 
@@ -693,7 +740,10 @@ const AssetInfoPage = () => {
           </div>
           <div className="info-container">
             <div className="info-header">Giá trị còn lại (VNĐ):</div>
-            <p>{formData.remaining_value_formatted || formatPrice(formData.remaining_value || 0)}</p>
+            <p>
+              {formData.remaining_value_formatted ||
+                formatPrice(formData.remaining_value || 0)}
+            </p>
           </div>
           <div className="info-container">
             <div className="info-header">Đề nghị thanh lý:</div>
@@ -720,8 +770,9 @@ const AssetInfoPage = () => {
             <p>
               {formData.responsible_user_name
                 ? `${formData.responsible_user_name} - ${
-                    userList?.find((user) => user._id === formData.responsible_user)
-                      ?.userid || ""
+                    userList?.find(
+                      (user) => user._id === formData.responsible_user
+                    )?.userid || ""
                   }`
                 : "Không có"}
             </p>

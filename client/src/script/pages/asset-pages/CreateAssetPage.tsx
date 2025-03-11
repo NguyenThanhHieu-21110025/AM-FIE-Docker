@@ -1,6 +1,12 @@
 import "../../../css/InfoPage.css";
 import { useState, useEffect } from "react";
-import { Asset, AssetRequest, createAsset } from "../../interfaces/Asset";
+import {
+  Asset,
+  AssetRequest,
+  createAsset,
+  getLocationId,
+  getUserId,
+} from "../../interfaces/Asset";
 import { useMainRef, useScrollToMain } from "../../context/MainRefContext";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -12,6 +18,7 @@ import Loader from "../../components/Loader";
 import { convertToNumber, formatPrice } from "../../utils/formatPrice";
 
 const CreateAssetPage = () => {
+  // Cập nhật initialFormData theo interface mới
   const initialFormData: Asset = {
     asset_code: "",
     asset_name: "",
@@ -40,7 +47,7 @@ const CreateAssetPage = () => {
   const mainRef = useMainRef();
   useScrollToMain();
 
-  // Calculate remaining value whenever depreciation rate or origin price changes
+  // Không thay đổi vì đã đúng cấu trúc
   useEffect(() => {
     const originPrice = formData.accounting?.origin_price || 0;
     const depreciationRate = formData.depreciation_rate || 0;
@@ -53,7 +60,7 @@ const CreateAssetPage = () => {
     }));
   }, [formData.depreciation_rate, formData.accounting?.origin_price]);
 
-  // Fetch user and address data
+  // Các query không thay đổi
   const { data: userList, isLoading: isLoadingUserList } = useQuery({
     queryFn: async () => {
       const token = (await refreshAccessToken()) || accessToken;
@@ -73,13 +80,13 @@ const CreateAssetPage = () => {
     enabled: !!userList && userList.length > 0,
   });
 
-  // Handle form input changes
+  // handleChange không thay đổi
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) {
+    // Giữ nguyên code của handleChange vì cấu trúc dữ liệu không thay đổi
     const { name, value } = e.target;
 
-    // Handle price inputs
     if (e.target.className.includes("input-price")) {
       const numericPrice = convertToNumber(value);
 
@@ -110,12 +117,10 @@ const CreateAssetPage = () => {
       return;
     }
 
-    // Handle quantity inputs
     if (name === "quantity") {
       const quantity = Number(value);
       const realCount = formData.quantity_differential?.real_count || 0;
 
-      // Calculate surplus/missing quantities
       let surplusQuantity = 0;
       let missingQuantity = 0;
 
@@ -163,6 +168,7 @@ const CreateAssetPage = () => {
       setFormData((prev) => ({
         ...prev,
         quantity_differential: {
+          ...prev.quantity_differential,
           real_count,
           surplus_quantity: surplusQuantity,
           missing_quantity: missingQuantity,
@@ -171,7 +177,6 @@ const CreateAssetPage = () => {
       return;
     }
 
-    // Handle depreciation rate input
     if (name === "depreciation_rate") {
       const rate = Math.min(Math.max(parseFloat(value) || 0, 0), 100);
       setFormData((prev) => ({
@@ -181,11 +186,10 @@ const CreateAssetPage = () => {
       return;
     }
 
-    // Handle all other inputs
     setFormData((prev) => ({ ...prev, [name]: value }));
   }
 
-  // Handle select inputs
+  // handleSelect không cần thay đổi nhiều vì chúng ta đang tạo mới, không xử lý dữ liệu đã populate
   function handleSelect(e: React.ChangeEvent<HTMLSelectElement>) {
     const { name, value } = e.target;
 
@@ -221,12 +225,11 @@ const CreateAssetPage = () => {
     }
   }
 
-  // Handle form submission
+  // handleSubmit cập nhật để phù hợp với interface mới
   async function handleSubmit(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
 
     try {
-      // Đảm bảo token luôn có giá trị
       let token = accessToken;
       if (!token) {
         token = await refreshAccessToken();
@@ -249,36 +252,42 @@ const CreateAssetPage = () => {
         ...requestData
       } = formData;
 
+      // Đảm bảo location và responsible_user là string ID
+      const assetRequest: AssetRequest = {
+        ...requestData,
+        location: getLocationId(requestData.location),
+        responsible_user: getUserId(requestData.responsible_user),
+      };
+
       // Validate required fields
-      if (!requestData.asset_name) {
+      if (!assetRequest.asset_name) {
         alert("Vui lòng nhập tên tài sản");
         return;
       }
 
       if (
-        !requestData.accounting?.quantity ||
-        requestData.accounting?.quantity <= 0
+        !assetRequest.accounting?.quantity ||
+        assetRequest.accounting?.quantity <= 0
       ) {
         alert("Vui lòng nhập số lượng hợp lệ");
         return;
       }
 
       if (
-        !requestData.accounting?.unit_price ||
-        requestData.accounting?.unit_price <= 0
+        !assetRequest.accounting?.unit_price ||
+        assetRequest.accounting?.unit_price <= 0
       ) {
         alert("Vui lòng nhập đơn giá hợp lệ");
         return;
       }
 
       // Đảm bảo origin_price luôn được tính chính xác
-      requestData.accounting.origin_price =
-        requestData.accounting.quantity * requestData.accounting.unit_price;
+      assetRequest.accounting.origin_price =
+        assetRequest.accounting.quantity * assetRequest.accounting.unit_price;
 
-      // Log dữ liệu trước khi gửi để kiểm tra
-      console.log("Token being used:", token.substring(0, 20) + "...");
+      console.log("Sending data:", assetRequest);
 
-      const result = await createAsset(requestData as AssetRequest, token);
+      const result = await createAsset(assetRequest, token);
 
       if (result) {
         navigate("/asset-dashboard");
@@ -288,7 +297,6 @@ const CreateAssetPage = () => {
     } catch (error: any) {
       console.error("Error creating asset:", error);
 
-      // Hiển thị chi tiết lỗi nếu có
       if (error.response?.data) {
         console.error("Server error details:", error.response.data);
         alert(`Lỗi: ${error.response.data.message || error.message}`);
@@ -540,14 +548,13 @@ const CreateAssetPage = () => {
                   <option value="DA">Dự án</option>
                 </select>
               </div>
-
               {/* Location and Responsibility */}
               <div className="info-container">
                 <div className="info-header">Địa chỉ phòng: </div>
                 <select
                   name="location"
                   onChange={handleSelect}
-                  value={formData.location || ""}
+                  value={getLocationId(formData.location)}
                 >
                   <option value="">Chọn địa chỉ phòng</option>
                   {addressList?.map((address) => (
@@ -563,7 +570,7 @@ const CreateAssetPage = () => {
                 <select
                   name="responsible_user"
                   onChange={handleSelect}
-                  value={formData.responsible_user || ""}
+                  value={getUserId(formData.responsible_user)}
                 >
                   <option value="">Chọn người chịu trách nhiệm</option>
                   {userList?.map((user) => (

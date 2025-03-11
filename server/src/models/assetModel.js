@@ -21,11 +21,6 @@ const historyItemSchema = new mongoose.Schema({
 });
 
 const assetsSchema = new mongoose.Schema({
-    asset_id: {
-        type: String,
-        // unique: true,
-        description: "Mã tài sản duy nhất"
-    },
     asset_code: {
         type: String,
         // required: true,
@@ -122,16 +117,6 @@ const assetsSchema = new mongoose.Schema({
     }
 });
 
-assetsSchema.pre('save', function (next) {    
-    if (!this.asset_id) {
-    const year = this.year_of_use || new Date().getFullYear();
-    const randomDigits = Math.floor(100 + Math.random() * 900); 
-    this.asset_id = `${year}-${randomDigits}`;
-    }
-    next();
-});
-
-assetsSchema.index({ asset_id: 1 });
 assetsSchema.index({ name: 1 });
 
 const Asset = mongoose.model('Asset', assetsSchema);
