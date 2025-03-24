@@ -2,13 +2,13 @@ import "../../../css/DashboardPage.css";
 import { useQuery } from "@tanstack/react-query";
 import { useMainRef, useScrollToMain } from "../../context/MainRefContext";
 import Table from "../../components/Table";
-import { addressTableColumns } from "../../utils/tableColumns";
+import { roomTableColumns } from "../../utils/tableColumns";
 import Loader from "../../components/Loader";
 import { useAuth } from "../../context/AuthContext";
-import { getAddressList } from "../../interfaces/Room";
+import { getRoomList } from "../../interfaces/Room";
 import { getUserList, User } from "../../interfaces/User";
 
-const AddressDashboardPage = () => {
+const RoomDashboardPage = () => {
   const mainRef = useMainRef();
   const { refreshAccessToken, accessToken } = useAuth();
   useScrollToMain();
@@ -27,7 +27,7 @@ const AddressDashboardPage = () => {
     queryKey: ["userList"],
   });
 
-  const { data: addressList, isLoading: isLoadingAddress } = useQuery({
+  const { data: roomList, isLoading: isLoadingRoom } = useQuery({
     queryFn: async () => {
       let token = accessToken;
       if (!token) {
@@ -36,9 +36,9 @@ const AddressDashboardPage = () => {
           throw new Error("Unable to refresh access token");
         }
       }
-      return getAddressList(token, userList as User[]);
+      return getRoomList(token, userList as User[]);
     },
-    queryKey: ["addressList", userList],
+    queryKey: ["roomList", userList],
     enabled: !!userList && userList.length > 0,
   });
 
@@ -46,18 +46,18 @@ const AddressDashboardPage = () => {
     <main className="dashboard-page" ref={mainRef}>
       <div className="title">Danh Sách Địa Chỉ Phòng</div>
       {isLoadingUser ||
-      isLoadingAddress ||
-      typeof addressList === "undefined" ? (
+      isLoadingRoom ||
+      typeof roomList === "undefined" ? (
         <Loader />
       ) : (
         <Table
-          data={addressList}
-          columns={addressTableColumns}
-          baseURL="/address-dashboard"
+          data={roomList}
+          columns={roomTableColumns}
+          baseURL="/room-dashboard"
         />
       )}
     </main>
   );
 };
 
-export default AddressDashboardPage;
+export default RoomDashboardPage;

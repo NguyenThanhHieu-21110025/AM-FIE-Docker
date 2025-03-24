@@ -14,14 +14,14 @@ import { FilterSidebar } from "./FilterSideBar";
 import { Link, useNavigate } from "react-router-dom";
 import { Column } from "../utils/tableColumns";
 import { useLocation } from "react-router-dom";
-import { Address } from "../interfaces/Room";
+import { Room } from "../interfaces/Room";
 import Modal from "./Modal";
 
 interface Props {
   data: any[];
   columns: Column[];
   baseURL: string;
-  addressList?: Address[];
+  roomList?: Room[];
   onRoomSelect?: (roomId: string) => void;
 }
 
@@ -29,7 +29,7 @@ const Table = ({
   data,
   columns,
   baseURL,
-  addressList,
+  roomList,
   onRoomSelect,
 }: Props) => {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -83,7 +83,7 @@ const Table = ({
     setShowRoomModal(false);
   };
 
-  const filteredRooms = addressList?.filter((room) =>
+  const filteredRooms = roomList?.filter((room) =>
     `${room.name} ${room.building}`
       .toLowerCase()
       .includes(roomSearch.toLowerCase())
@@ -113,7 +113,7 @@ const Table = ({
 
           {/* Action Buttons */}
           <div className="button-group">
-            {isAssetDashboard && addressList && (
+            {isAssetDashboard && roomList && (
               <button
                 className="search-btn"
                 onClick={() => setShowRoomModal(true)}
@@ -255,7 +255,7 @@ const Table = ({
       </div>
 
       {/* Room Selection Modal */}
-      {showRoomModal && addressList && (
+      {showRoomModal && roomList && (
         <Modal title="Chọn phòng" onClose={() => setShowRoomModal(false)}>
           <div className="modal-body">
             <div className="room-search">
@@ -285,7 +285,7 @@ const Table = ({
                     checked={selectedRooms.includes(room._id)}
                     onChange={() => handleRoomSelection(room._id)}
                   />
-                  <span className="room-text">{`${room.name} - ${room.building}`}</span>
+                  <span className="room-text">{`${room.fullName}`}</span>
                 </label>
               ))}
             </div>

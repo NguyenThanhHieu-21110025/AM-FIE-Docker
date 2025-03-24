@@ -1,7 +1,7 @@
 const Room = require("../models/roomModel");
 
 const roomController = {
-  createAddress: async (req, res) => {
+  createRoom: async (req, res) => {
     try {
       // Tạo phòng mới với các trường bắt buộc và các trường mặc định
       const room = new Room({
@@ -19,7 +19,7 @@ const roomController = {
     }
   },
 
-  getAllAddresses: async (req, res) => {
+  getAllRoom: async (req, res) => {
     try {
       // Lấy danh sách phòng và populate tài sản và người dùng
       const rooms = await Room.find()
@@ -31,7 +31,7 @@ const roomController = {
     }
   },
 
-  getAddressById: async (req, res) => {
+  getRoomById: async (req, res) => {
     try {
       const room = await Room.findById(req.params.id)
         .populate('assets')
@@ -46,7 +46,7 @@ const roomController = {
     }
   },
 
-  updateAddress: async (req, res) => {
+  updateRoom: async (req, res) => {
     try {
       const room = await Room.findById(req.params.id);
       if (!room) {
@@ -69,7 +69,7 @@ const roomController = {
     }
   },
 
-  deleteAddress: async (req, res) => {
+  deleteRoom: async (req, res) => {
     try {
       const room = await Room.findById(req.params.id);
       if (!room) {

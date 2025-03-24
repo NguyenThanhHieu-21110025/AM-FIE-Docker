@@ -11,7 +11,7 @@ import { useMainRef, useScrollToMain } from "../../context/MainRefContext";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { getUserList, User } from "../../interfaces/User";
-import { Address, getAddressList } from "../../interfaces/Room";
+import { Room, getRoomList } from "../../interfaces/Room";
 import { useQuery } from "@tanstack/react-query";
 import { FaAngleLeft } from "react-icons/fa";
 import Loader from "../../components/Loader";
@@ -70,13 +70,13 @@ const CreateAssetPage = () => {
     queryKey: ["userList"],
   });
 
-  const { data: addressList, isLoading: isLoadingAddressList } = useQuery({
+  const { data: roomList, isLoading: isLoadingRoomList } = useQuery({
     queryFn: async () => {
       const token = (await refreshAccessToken()) || accessToken;
       if (!token) throw new Error("Unable to refresh access token");
-      return getAddressList(token, userList as User[]);
+      return getRoomList(token, userList as User[]);
     },
-    queryKey: ["addressList", userList],
+    queryKey: ["roomList", userList],
     enabled: !!userList && userList.length > 0,
   });
 
@@ -205,15 +205,15 @@ const CreateAssetPage = () => {
     }
 
     if (name === "location") {
-      const selectedAddress = addressList?.find(
-        (address) => address._id === value
+      const selectedRoom = roomList?.find(
+        (room) => room._id === value
       );
-      if (!selectedAddress) return;
+      if (!selectedRoom) return;
 
       setFormData((prev) => ({
         ...prev,
-        location: selectedAddress._id,
-        location_code: selectedAddress.room_id,
+        location: selectedRoom._id,
+        location_code: selectedRoom.fullName,
       }));
     }
 
@@ -241,7 +241,6 @@ const CreateAssetPage = () => {
       // Loại bỏ các trường formatting và computed
       const {
         _id,
-        __v,
         unit_price_formatted,
         origin_price_formatted,
         remaining_value_formatted,
@@ -306,7 +305,7 @@ const CreateAssetPage = () => {
     }
   }
 
-  if (isLoadingUserList || isLoadingAddressList) {
+  if (isLoadingUserList || isLoadingRoomList) {
     return <Loader />;
   }
 
@@ -557,9 +556,9 @@ const CreateAssetPage = () => {
                   value={getLocationId(formData.location)}
                 >
                   <option value="">Chọn địa chỉ phòng</option>
-                  {addressList?.map((address) => (
-                    <option key={address._id} value={address._id}>
-                      {address.room_id} - {address.name}
+                  {roomList?.map((room) => (
+                    <option key={room._id} value={room._id}>
+                      {room.fullName} - {room.name}
                     </option>
                   ))}
                 </select>

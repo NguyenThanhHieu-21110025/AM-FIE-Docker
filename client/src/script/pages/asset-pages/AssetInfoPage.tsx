@@ -11,7 +11,7 @@ import { useMainRef, useScrollToMain } from "../../context/MainRefContext";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { getUserList, User } from "../../interfaces/User";
-import { Address, getAddressList } from "../../interfaces/Room";
+import { Room, getRoomList } from "../../interfaces/Room";
 import { useQuery } from "@tanstack/react-query";
 import { FaAngleLeft } from "react-icons/fa";
 import Loader from "../../components/Loader";
@@ -56,7 +56,7 @@ const AssetInfoPage = () => {
     queryKey: ["userList"],
   });
 
-  const { data: addressList, isLoading: isLoadingAddressList } = useQuery({
+  const { data: roomList, isLoading: isLoadingRoomList } = useQuery({
     queryFn: async () => {
       let token = accessToken;
       if (!token) {
@@ -65,9 +65,9 @@ const AssetInfoPage = () => {
           throw new Error("Unable to refresh access token");
         }
       }
-      return getAddressList(token, userList as User[]);
+      return getRoomList(token, userList as User[]);
     },
-    queryKey: ["addressList", userList],
+    queryKey: ["roomList", userList],
     enabled: !!userList && userList.length > 0,
   });
 
@@ -232,14 +232,14 @@ const AssetInfoPage = () => {
         responsible_user_name: name,
       }));
     } else if (name === "location") {
-      if (typeof addressList === "undefined") return;
-      const { room_id, _id } = addressList.find(
-        (address) => address._id === e.target.value
-      ) as Address;
+      if (typeof roomList === "undefined") return;
+      const { fullName, _id } = roomList.find(
+        (room) => room._id === e.target.value
+      ) as Room;
       setFormData((prevState) => ({
         ...prevState,
         location: _id,
-        location_code: room_id,
+        location_code: fullName,
       }));
     } else if (name === "acquisition_source") {
       setFormData((prev) => ({
@@ -266,7 +266,6 @@ const AssetInfoPage = () => {
       // Remove formatted and computed fields that we don't want to send to the server
       const {
         _id,
-        __v,
         unit_price_formatted,
         origin_price_formatted,
         remaining_value_formatted,
@@ -599,9 +598,9 @@ const AssetInfoPage = () => {
               value={getLocationId(formData.location)}
             >
               <option value="">Chọn địa chỉ phòng</option>
-              {addressList?.map((address) => (
-                <option key={address._id} value={address._id}>
-                  {address.room_id} - {address.name}
+              {roomList?.map((room) => (
+                <option key={room._id} value={room._id}>
+                  {room.fullName} - {room.name}
                 </option>
               ))}
             </select>
@@ -809,7 +808,7 @@ const AssetInfoPage = () => {
             <p>Trở về</p>
           </div>
           <h1 className="title">Thông tin tài sản</h1>
-          {isLoadingUserList || isLoadingAddressList || isLoadingAsset ? (
+          {isLoadingUserList || isLoadingRoomList || isLoadingAsset ? (
             <Loader />
           ) : mode === "info" ? (
             InfoMode()

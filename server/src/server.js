@@ -35,7 +35,7 @@ app.use(cookieParser());
 
 app.use('/api/asset', assetRoutes); 
 app.use('/api/user', userRoutes); 
-app.use('/api/addresses', roomRoutes); 
+app.use('/api/room', roomRoutes); 
 app.use('/api/import', importRouter);
 app.use('/api/export', exportRouter);
 app.use('/api/auth', authRoutes);

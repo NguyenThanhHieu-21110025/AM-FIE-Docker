@@ -2,7 +2,7 @@ import "../../../css/Navbar.css";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import uteLogo from "../../../assets/ute-logo.png";
-import { FaWarehouse, FaUserCircle } from "react-icons/fa";
+import { FaWarehouse, FaUserCircle, FaChartBar } from "react-icons/fa";
 import { FaLocationDot } from "react-icons/fa6";
 
 interface Props {
@@ -13,7 +13,7 @@ const Navbar = (props: Props) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { admin } = useAuth();
-  
+
   const showNavbar =
     location.pathname !== "/" &&
     location.pathname !== "/login" &&
@@ -32,6 +32,17 @@ const Navbar = (props: Props) => {
           <ul className="navbar-menu">
             <li
               className={
+                location.pathname.startsWith("/asset-statistics")
+                  ? "active"
+                  : ""
+              }
+              onClick={() => navigate("/asset-statistics")}
+            >
+              <FaChartBar size={ICON_SIZE} />
+              <p>Thống kê</p>
+            </li>
+            <li
+              className={
                 location.pathname.startsWith("/asset-dashboard") ? "active" : ""
               }
               onClick={() => navigate("/asset-dashboard")}
@@ -41,19 +52,19 @@ const Navbar = (props: Props) => {
             </li>
             <li
               className={
-                location.pathname.startsWith("/address-dashboard")
-                  ? "active"
-                  : ""
+                location.pathname.startsWith("/room-dashboard") ? "active" : ""
               }
-              onClick={() => navigate("/address-dashboard")}
+              onClick={() => navigate("/room-dashboard")}
             >
               <FaLocationDot size={ICON_SIZE} />
-              <p>Địa chỉ phòng</p>
+              <p>Phòng</p>
             </li>
             {admin && (
               <li
                 className={
-                  location.pathname.startsWith("/user-dashboard") ? "active" : ""
+                  location.pathname.startsWith("/user-dashboard")
+                    ? "active"
+                    : ""
                 }
                 onClick={() => navigate("/user-dashboard")}
               >

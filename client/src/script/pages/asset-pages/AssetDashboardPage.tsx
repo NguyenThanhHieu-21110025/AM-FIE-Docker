@@ -7,7 +7,7 @@ import { assetTableColumns } from "../../utils/tableColumns";
 import Loader from "../../components/Loader";
 import { useAuth } from "../../context/AuthContext";
 import { getUserList, User } from "../../interfaces/User";
-import { Address, getAddressList } from "../../interfaces/Room";
+import { Room, getRoomList } from "../../interfaces/Room";
 import { useState } from "react";
 
 
@@ -31,7 +31,7 @@ const AssetDashboardPage = () => {
     queryKey: ["userList"],
   });
 
-  const { data: addressList, isLoading: isLoadingAddress } = useQuery({
+  const { data: roomList, isLoading: isLoadingRoom } = useQuery({
     queryFn: async () => {
       let token = accessToken;
       if (!token) {
@@ -40,9 +40,9 @@ const AssetDashboardPage = () => {
           throw new Error("Unable to refresh access token");
         }
       }
-      return getAddressList(token, userList as User[]);
+      return getRoomList(token, userList as User[]);
     },
-    queryKey: ["addressList", userList],
+    queryKey: ["roomList", userList],
     enabled: !!userList && userList.length > 0,
   });
 
@@ -55,10 +55,10 @@ const AssetDashboardPage = () => {
           throw new Error("Unable to refresh access token");
         }
       }
-      return getAssetList(token, userList as User[], addressList as Address[]);
+      return getAssetList(token, userList as User[], roomList as Room[]);
     },
-    queryKey: ["assetList", addressList],
-    enabled: !!addressList && addressList.length > 0,
+    queryKey: ["assetList", roomList],
+    enabled: !!roomList && roomList.length > 0,
   });
 
   const filteredAssets = assetList?.filter(asset => {
@@ -82,7 +82,7 @@ const AssetDashboardPage = () => {
       </div>
 
       {isLoadingAsset ||
-      isLoadingAddress ||
+      isLoadingRoom ||
       isLoadingUser ||
       typeof assetList === "undefined" ? (
         <Loader />
@@ -91,7 +91,7 @@ const AssetDashboardPage = () => {
           data={filteredAssets || assetList}
           columns={assetTableColumns}
           baseURL="/asset-dashboard"
-          addressList={addressList}
+          roomList={roomList}
           onRoomSelect={setSelectedRoom}
         />
       )}

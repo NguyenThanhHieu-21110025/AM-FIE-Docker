@@ -1,11 +1,11 @@
 import { formatPrice } from "../utils/formatPrice";
-import { Address } from "./Room";
+import { Room } from "./Room";
 import { User } from "./User";
 
 // Định nghĩa các type con để cải thiện khả năng đọc
 type PopulatedLocation = {
   _id: string; 
-  room_id: string; 
+  fullName: string; 
   name: string;
   building?: string;
 };
@@ -56,11 +56,8 @@ export interface Asset {
     real_count: number;
     difference: number;
   }>;
-  
-  // Trường metadata từ MongoDB
   __v?: number;
   
-  // Các trường hiển thị đã định dạng (chỉ sử dụng ở frontend)
   unit_price_formatted?: string;
   origin_price_formatted?: string;
   remaining_value_formatted?: string;
@@ -70,29 +67,30 @@ export interface Asset {
 }
 
 // Interface cho request API - chỉ bao gồm các trường cần thiết khi tạo/cập nhật
-export interface AssetRequest {
+export type AssetRequest = Omit<
+  Asset, 
+  | '_id' 
+  | '__v' 
+  | 'history' 
+  | 'unit_price_formatted' 
+  | 'origin_price_formatted' 
+  | 'remaining_value_formatted'
+  | 'responsible_user_name'
+  | 'responsible_user_userid'
+  | 'location_code'
+> & {
+  location?: string;
+  responsible_user?: string;
   asset_code?: string;
-  asset_name: string;
   specifications?: string;
-  year_of_use: number;
-  accounting: {
-    quantity: number;
-    unit_price: number;
-    origin_price: number;
-  };
   quantity_differential?: {
     real_count: number;
     surplus_quantity: number;
     missing_quantity: number;
   };
-  depreciation_rate: number;
-  remaining_value: number;
   suggested_disposal?: string;
-  acquisition_source: "Lẻ" | "DA";
-  location?: string;
-  responsible_user?: string;
   note?: string;
-}
+};
 
 const HANDLE_ASSET_URL = import.meta.env.VITE_API_URL + "/asset";
 
@@ -115,7 +113,7 @@ export const getUserId = (user: string | PopulatedUser | undefined): string => {
 export async function getAssetList(
   token: string,
   userList: User[],
-  addressList: Address[]
+  addressList: Room[]
 ) {
   const res = await fetch(`${HANDLE_ASSET_URL}`, {
     headers: { token: `Bearer ${token}` },
@@ -137,10 +135,10 @@ export async function getAssetList(
     }
     
     if (typeof asset.location === 'object' && asset.location !== null) {
-      asset.location_code = asset.location.room_id || "N/A";
+      asset.location_code = asset.location.fullName || "N/A";
     } else {
       asset.location_code = 
-        addressList.find((address) => address._id === asset.location)?.room_id || "N/A";
+        addressList.find((address) => address._id === asset.location)?.fullName || "N/A";
     }
   });
   return data;
@@ -164,7 +162,7 @@ export async function getAssetById(id: string, token: string): Promise<Asset> {
   }
   
   if (typeof data.location === 'object' && data.location !== null) {
-    data.location_code = data.location.room_id;
+    data.location_code = data.location.fullName;
   }
   
   return data;

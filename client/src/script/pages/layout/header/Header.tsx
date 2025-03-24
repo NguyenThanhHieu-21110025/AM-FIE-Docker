@@ -14,6 +14,7 @@ function Header() {
     location.pathname === "/forgotPassword";
 
   return (
+    <>
     <header>
       <div className="header-section">
         <div className="nav-buttons">
@@ -21,7 +22,7 @@ function Header() {
             <FaHome />
             Trang chủ
           </button>
-          <button onClick={() => navigate("/asset-dashboard")}>
+          <button onClick={() => navigate("/asset-statistics")}>
             <FaChartBar />
             Bảng điều khiển
           </button>
@@ -40,6 +41,8 @@ function Header() {
         </div>
       )}
     </header>
+    <div className="header-spacer"></div>
+    </>
   );
 }
 

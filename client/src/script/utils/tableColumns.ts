@@ -166,25 +166,15 @@ export const userTableColumns: Column[] = [
   },
 ];
 
-export const addressTableColumns: Column[] = [
+export const roomTableColumns: Column[] = [
   {
     header: "Thông tin chung",
     footer: "Thông tin chung",
     columns: [
       {
-        header: "Mã phòng",
-        accessorKey: "room_id",
-        footer: "Mã phòng",
-      },
-      {
-        header: "Tên phòng",
-        accessorKey: "name",
-        footer: "Tên phòng",
-      },
-      {
-        header: "Tên tòa nhà",
-        accessorKey: "building",
-        footer: "Tên tòa nhà",
+        header: "Phòng",
+        accessorKey: "fullName",
+        footer: "Phòng",
       },
       {
         header: "Người phụ trách",
@@ -217,7 +207,7 @@ export const addressTableColumns: Column[] = [
   },
 
   {
-    header: "Kiểm kê thực tế",
+    header: "Theo kiểm kê thực tế",
     footer: "Kiểm kê thực tế",
     columns: [
       {
@@ -261,8 +251,8 @@ export const addressTableColumns: Column[] = [
   },
 
   {
-    header: "Lý do chênh lệch",
-    footer: "Lý do chênh lệch",
+    header: "Lý do",
+    footer: "Lý do",
     columns: [
       {
         header: "Thất lạc",

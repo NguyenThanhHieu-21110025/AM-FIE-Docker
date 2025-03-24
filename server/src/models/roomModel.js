@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
 const roomsSchema = new mongoose.Schema({
+  fullName: {
+    type: String,
+    description: "Tên phòng đầy đủ"
+  },
   name: {
     type: String,
     required: true,
@@ -103,11 +107,11 @@ const roomsSchema = new mongoose.Schema({
   }
 });
 
-// Hook tạo room_id tự động khi tạo mới phòng
+// Hook tạo fullName tự động khi tạo mới phòng
 roomsSchema.pre("save", function(next) {
-  if (this.isNew && !this.room_id) {
+  if (this.isNew && !this.fullName) {
     // Format: FIE-[BUILDING]-[NAME]
-    this.room_id = `FIE-${this.building}-${this.name}`.replace(/\s+/g, '-');
+    this.fullName = `${this.building}-${this.name}`.replace(/\s+/g, '-');
   }
   next();
 });

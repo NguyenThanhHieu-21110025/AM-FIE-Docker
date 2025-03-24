@@ -12,11 +12,12 @@ import CreateAssetPage from "./pages/asset-pages/CreateAssetPage";
 import React from "react";
 import UserDashboardPage from "./pages/user-pages/UserDashboardPage";
 import UserInfoPage from "./pages/user-pages/UserInfoPage";
-import AddressDashboardPage from "./pages/address-pages/AddressDashboardPage";
-import AddressInfoPage from "./pages/address-pages/AddressInfoPage";
-import CreateAddressPage from "./pages/address-pages/CreateAddressPage";
+import RoomDashboardPage from "./pages/room-pages/RoomDashboardPage";
+import RoomInfoPage from "./pages/room-pages/RoomInfoPage";
+import CreateRoomPage from "./pages/room-pages/CreateRoomPage";
 import ForgotPassword from "./pages/auth-pages/ForgotPasswordPage";
 import CreateUserPage from "./pages/user-pages/CreateUserPage";
+import AssetStatisticsPage from "./pages/asset-dashboard-statistics/AssetStatisticsPage";
 
 function App() {
   const queryClient = new QueryClient();
@@ -45,16 +46,16 @@ function App() {
                   element={<ProtectedRoute Component={CreateAssetPage} />}
                 />
                 <Route
-                  path="/address-dashboard"
-                  element={<ProtectedRoute Component={AddressDashboardPage} />}
+                  path="/room-dashboard"
+                  element={<ProtectedRoute Component={RoomDashboardPage} />}
                 />
                 <Route
-                  path="/address-dashboard/:id"
-                  element={<ProtectedRoute Component={AddressInfoPage} />}
+                  path="/room-dashboard/:id"
+                  element={<ProtectedRoute Component={RoomInfoPage} />}
                 />
                 <Route
-                  path="/address-dashboard/create"
-                  element={<ProtectedRoute Component={CreateAddressPage} />}
+                  path="/room-dashboard/create"
+                  element={<ProtectedRoute Component={CreateRoomPage} />}
                 />
                 <Route
                   path="/user-dashboard"
@@ -67,6 +68,10 @@ function App() {
                 <Route
                   path="/user-dashboard/create"
                   element={<ProtectedRoute Component={CreateUserPage} />}
+                />
+                <Route
+                  path="/asset-statistics"
+                  element={<ProtectedRoute Component={AssetStatisticsPage} />}
                 />
               </Routes>
             </Layout>

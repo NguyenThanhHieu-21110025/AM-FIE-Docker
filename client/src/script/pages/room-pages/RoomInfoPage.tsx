@@ -8,22 +8,22 @@ import Loader from "../../components/Loader";
 import { useAuth } from "../../context/AuthContext";
 import { FaAngleLeft } from "react-icons/fa";
 import {
-  Address,
-  AddressRequest,
-  deleteAddress,
-  getAddressById,
-  updateAddress,
+  Room,
+  RoomRequest,
+  deleteRoom,
+  getRoomById,
+  updateRoom,
 } from "../../interfaces/Room";
 
-const AddressInfoPage = () => {
-  const [formData, setFormData] = useState<Address>({} as Address);
+const RoomInfoPage = () => {
+  const [formData, setFormData] = useState<Room>({} as Room);
   const [mode, setMode] = useState<"info" | "update">("info");
   const { refreshAccessToken, accessToken } = useAuth();
   const location = useLocation();
   const id = location.pathname.split("/").pop() as string;
   const ICON_SIZE = 20;
 
-  const { data, isLoading: isLoadingAddress } = useQuery<Address>({
+  const { data, isLoading: isLoadingRoom } = useQuery<Room>({
     queryFn: async () => {
       let token = accessToken;
       if (!token) {
@@ -32,11 +32,17 @@ const AddressInfoPage = () => {
           throw new Error("Unable to refresh access token");
         }
       }
-      return getAddressById(id, token);
+      return getRoomById(id, token);
     },
-    queryKey: ["address", id],
+    queryKey: ["room", id],
   });
 
+  function getUserId(user: string | { _id: string; name: string; userid?: string }): string {
+    if (typeof user === 'object' && user !== null) {
+      return user._id;
+    }
+    return user || "";
+  }
   const { data: userList, isLoading: isLoadingUserList } = useQuery<User[]>({
     queryFn: async () => {
       let token = accessToken;
@@ -97,9 +103,9 @@ const AddressInfoPage = () => {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { responsible_user_name, ...filteredData } = formData;
-    const addressRequest = { ...filteredData } as AddressRequest;
-    console.log(addressRequest);
-    const result = await updateAddress(id, addressRequest, token);
+    const roomRequest = { ...filteredData } as RoomRequest;
+    console.log(roomRequest);
+    const result = await updateRoom(id, roomRequest, token);
     if (result) {
       console.log("created address successfully");
       setMode("info");
@@ -119,13 +125,17 @@ const AddressInfoPage = () => {
         throw new Error("Unable to refresh access token");
       }
     }
-    const result = await deleteAddress(id, token);
+    const result = await deleteRoom(id, token);
     if (result) {
-      navigate("/address-dashboard");
+      navigate("/room-dashboard");
     }
   }
 
   const InfoMode = (): ReactNode => {
+    const responsibleUserId = getUserId(formData.responsible_user);
+    
+    const responsibleUser = userList?.find(user => user._id === responsibleUserId);
+    
     return (
       <div className="info-body">
         <div className="long-info">
@@ -138,18 +148,19 @@ const AddressInfoPage = () => {
         </div>
         <div className="long-info">
           <div className="info-header">Người chịu trách nhiệm: </div>
-          <p>{`${formData.responsible_user_name} - ${
-            userList?.find((user) => user._id === formData.responsible_user)
-              ?.userid
-          }`}</p>
+          <p>
+            {formData.responsible_user_name 
+              ? `${formData.responsible_user_name}${responsibleUser?.userid ? ' - ' + responsibleUser.userid : ''}` 
+              : 'Không có người chịu trách nhiệm'}
+          </p>
         </div>
-
+  
         <div className="button-container">
           <button className="update-btn" onClick={() => setMode("update")}>
             Cập nhật thông tin
           </button>
           <button className="delete-btn" onClick={handleDelete}>
-            Xóa địa chỉ phòng
+            Xóa phòng
           </button>
         </div>
       </div>
@@ -185,12 +196,12 @@ const AddressInfoPage = () => {
             name="responsible_user"
             onChange={handleSelect}
             aria-placeholder="Chọn người chịu trách nhiệm"
-            value={formData.responsible_user || ""}
+            value={getUserId(formData.responsible_user)}
           >
             <option value="">Không có người chịu trách nhiệm</option>
             {userList?.map((user) => (
               <option key={user._id} value={user._id}>
-                {`${user.name} - ${user.userid}`}
+                {`${user.name} - ${user.userid || ""}`}
               </option>
             ))}
           </select>
@@ -213,7 +224,7 @@ const AddressInfoPage = () => {
         <div className="layout">
           <div
             className="back-button"
-            onClick={() => navigate("/address-dashboard")}
+            onClick={() => navigate("/room-dashboard")}
           >
             <FaAngleLeft size={ICON_SIZE} />
             <p>Trở về</p>
@@ -221,7 +232,7 @@ const AddressInfoPage = () => {
           <h1 className="title">
             {mode === "info" ? "Thông Tin" : "Cập Nhật"} Phòng
           </h1>
-          {isLoadingAddress || isLoadingUserList ? (
+          {isLoadingRoom || isLoadingUserList ? (
             <Loader />
           ) : mode === "info" ? (
             InfoMode()
@@ -234,4 +245,4 @@ const AddressInfoPage = () => {
   );
 };
 
-export default AddressInfoPage;
+export default RoomInfoPage;
