@@ -16,7 +16,14 @@ import { useQuery } from "@tanstack/react-query";
 import { FaAngleLeft } from "react-icons/fa";
 import Loader from "../../components/Loader";
 import { convertToNumber, formatPrice } from "../../utils/formatPrice";
+import { useAssetSuggestions } from "../../hooks/useAssetSuggestions";
+import AutocompleteSuggestions from "../../components/AutocompleteSuggestions";
 
+interface AssetSuggestion {
+  name: string;
+  code: string;
+  _id?: string;
+}
 const CreateAssetPage = () => {
   // Cập nhật initialFormData theo interface mới
   const initialFormData: Asset = {
@@ -45,6 +52,16 @@ const CreateAssetPage = () => {
   const { refreshAccessToken, accessToken } = useAuth();
   const navigate = useNavigate();
   const mainRef = useMainRef();
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlightedSuggestion, setHighlightedSuggestion] = useState(-1);
+  const { getFilteredSuggestions } = useAssetSuggestions();
+  const [filteredSuggestions, setFilteredSuggestions] = useState<
+    AssetSuggestion[]
+  >([]);
+  const [activeField, setActiveField] = useState<"name" | "code">("name");
+  const [nameInputFocused, setNameInputFocused] = useState(false);
+  const [codeInputFocused, setCodeInputFocused] = useState(false);
+
   useScrollToMain();
 
   // Không thay đổi vì đã đúng cấu trúc
@@ -205,9 +222,7 @@ const CreateAssetPage = () => {
     }
 
     if (name === "location") {
-      const selectedRoom = roomList?.find(
-        (room) => room._id === value
-      );
+      const selectedRoom = roomList?.find((room) => room._id === value);
       if (!selectedRoom) return;
 
       setFormData((prev) => ({
@@ -309,6 +324,70 @@ const CreateAssetPage = () => {
     return <Loader />;
   }
 
+  // Function to handle input change with suggestions
+  const handleAssetNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData((prev) => ({ ...prev, asset_name: value }));
+
+    const suggestions = getFilteredSuggestions(value, "name");
+    setFilteredSuggestions(suggestions);
+    setShowSuggestions(suggestions.length > 0);
+    setHighlightedSuggestion(-1);
+    setActiveField("name");
+  };
+
+  const handleAssetCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData((prev) => ({ ...prev, asset_code: value }));
+
+    const suggestions = getFilteredSuggestions(value, "code");
+    setFilteredSuggestions(suggestions);
+    setShowSuggestions(suggestions.length > 0);
+    setHighlightedSuggestion(-1);
+    setActiveField("code");
+  };
+
+  // Function to handle suggestion selection
+  const handleSelectSuggestion = (suggestion: {
+    name: string;
+    code: string;
+  }) => {
+    setFormData((prev) => ({
+      ...prev,
+      asset_name: suggestion.name,
+      asset_code: suggestion.code,
+    }));
+    setShowSuggestions(false);
+  };
+
+  // Function to handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showSuggestions) return;
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setHighlightedSuggestion((prev) =>
+          prev < filteredSuggestions.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setHighlightedSuggestion((prev) => (prev > 0 ? prev - 1 : 0));
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (highlightedSuggestion >= 0) {
+          handleSelectSuggestion(filteredSuggestions[highlightedSuggestion]);
+        }
+        break;
+      case "Escape":
+        setShowSuggestions(false);
+        break;
+      default:
+        break;
+    }
+  };
   return (
     <main ref={mainRef} className="info-page">
       <div className="container">
@@ -332,24 +411,86 @@ const CreateAssetPage = () => {
                   <div className="info-header">
                     Tên tài sản: <span className="required">*</span>
                   </div>
-                  <input
-                    type="text"
-                    name="asset_name"
-                    value={formData.asset_name || ""}
-                    onChange={handleChange}
-                    required
-                  />
+                  <div className="autocomplete-container">
+                    <input
+                      type="text"
+                      name="asset_name"
+                      value={formData.asset_name || ""}
+                      onChange={handleAssetNameChange}
+                      onKeyDown={handleKeyDown}
+                      onFocus={() => {
+                        setNameInputFocused(true);
+                        if (
+                          formData.asset_name &&
+                          getFilteredSuggestions(formData.asset_name, "name")
+                            .length > 0
+                        ) {
+                          setShowSuggestions(true);
+                          setActiveField("name");
+                        }
+                      }}
+                      onBlur={() => {
+                        setTimeout(() => {
+                          setNameInputFocused(false);
+                          if (!codeInputFocused) {
+                            setShowSuggestions(false);
+                          }
+                        }, 200);
+                      }}
+                      className="autocomplete-input"
+                      required
+                    />
+                    {activeField === "name" && (
+                      <AutocompleteSuggestions
+                        suggestions={filteredSuggestions}
+                        onSelect={handleSelectSuggestion}
+                        visible={showSuggestions}
+                        highlightedIndex={highlightedSuggestion}
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="column">
                 <div className="info-container">
                   <div className="info-header">Mã tài sản: </div>
-                  <input
-                    type="text"
-                    name="asset_code"
-                    value={formData.asset_code || ""}
-                    onChange={handleChange}
-                  />
+                  <div className="autocomplete-container">
+                    <input
+                      type="text"
+                      name="asset_code"
+                      value={formData.asset_code || ""}
+                      onChange={handleAssetCodeChange}
+                      onKeyDown={handleKeyDown}
+                      onFocus={() => {
+                        setCodeInputFocused(true);
+                        if (
+                          formData.asset_code &&
+                          getFilteredSuggestions(formData.asset_code, "code")
+                            .length > 0
+                        ) {
+                          setShowSuggestions(true);
+                          setActiveField("code");
+                        }
+                      }}
+                      onBlur={() => {
+                        setTimeout(() => {
+                          setCodeInputFocused(false);
+                          if (!nameInputFocused) {
+                            setShowSuggestions(false);
+                          }
+                        }, 200);
+                      }}
+                      className="autocomplete-input"
+                    />
+                    {activeField === "code" && (
+                      <AutocompleteSuggestions
+                        suggestions={filteredSuggestions}
+                        onSelect={handleSelectSuggestion}
+                        visible={showSuggestions}
+                        highlightedIndex={highlightedSuggestion}
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

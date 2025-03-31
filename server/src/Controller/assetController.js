@@ -283,6 +283,35 @@ const assetController = {
       res.status(500).json(err);
     }
   },
+  getAssetDictionary: async (req, res) => {
+    try {
+      // Get unique asset name-code pairs
+      const assetDictionary = await Assets.aggregate([
+        {
+          $group: {
+            _id: "$asset_name",
+            name: { $first: "$asset_name" },
+            code: { $first: "$asset_code" },
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { count: -1 } },
+        { $project: { _id: 0, name: 1, code: 1 } }
+      ]);
+
+      res.status(200).json({ 
+        success: true, 
+        data: assetDictionary 
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Error fetching asset dictionary",
+        error: error.message,
+      });
+    }
+  }
 };
+
 
 module.exports = assetController;

@@ -9,13 +9,21 @@ import {
   getFilteredRowModel,
 } from "@tanstack/react-table";
 import { useState } from "react";
-import { FaSort, FaSortDown, FaSortUp, FaPlus, FaSearch } from "react-icons/fa";
+import {
+  FaSort,
+  FaSortDown,
+  FaSortUp,
+  FaPlus,
+  FaSearch,
+  FaFileExcel,
+} from "react-icons/fa";
 import { FilterSidebar } from "./FilterSideBar";
 import { Link, useNavigate } from "react-router-dom";
 import { Column } from "../utils/tableColumns";
 import { useLocation } from "react-router-dom";
 import { Room } from "../interfaces/Room";
 import Modal from "./Modal";
+import { useAuth } from "../context/AuthContext";
 
 interface Props {
   data: any[];
@@ -23,6 +31,8 @@ interface Props {
   baseURL: string;
   roomList?: Room[];
   onRoomSelect?: (roomId: string) => void;
+  showExportButton?: boolean;
+  exportEndpoint?: string;
 }
 
 const Table = ({
@@ -31,15 +41,19 @@ const Table = ({
   baseURL,
   roomList,
   onRoomSelect,
+  showExportButton = false,
+  exportEndpoint = "/export/export",
 }: Props) => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filtering, setFiltering] = useState("");
   const [showRoomModal, setShowRoomModal] = useState(false);
   const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
   const [roomSearch, setRoomSearch] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
   const location = useLocation();
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const navigate = useNavigate();
+  const { refreshAccessToken, accessToken } = useAuth();
 
   const isAssetDashboard = location.pathname === "/asset-dashboard";
 
@@ -59,6 +73,56 @@ const Table = ({
     onSortingChange: setSorting,
     onGlobalFilterChange: setFiltering,
   });
+
+  // Handle Excel export
+  const handleExportExcel = async () => {
+    try {
+      setIsExporting(true);
+      let token = accessToken;
+      if (!token) {
+        token = await refreshAccessToken();
+        if (!token) {
+          throw new Error("Unable to refresh access token");
+        }
+      }
+
+      // Call the export endpoint
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}${exportEndpoint}`,
+        {
+          headers: {
+            token: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to export data");
+      }
+
+      // Create blob from response and download it
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      // Get current date for filename
+      const date = new Date().toISOString().split("T")[0];
+      a.download = `export-${date}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Export failed:", error);
+      alert(
+        "Xuất dữ liệu thất bại: " +
+          (error instanceof Error ? error.message : "Unknown error")
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleRoomSelection = (roomId: string) => {
     setSelectedRooms((prev) => {
@@ -100,15 +164,15 @@ const Table = ({
         <div className="table-buttons">
           {/* Search Bar */}
           <div className="search-bar">
+            <div className="search-icon">
+              <FaSearch size={16} />
+            </div>
             <input
               type="text"
               value={filtering}
               onChange={(e) => setFiltering(e.target.value)}
-              placeholder="Tìm kiếm tất cả cột..."
+              placeholder="Tìm kiếm..."
             />
-            <div className="search-icon">
-              <FaSearch size={22} />
-            </div>
           </div>
 
           {/* Action Buttons */}
@@ -122,6 +186,18 @@ const Table = ({
                 <span>Tìm theo phòng</span>
               </button>
             )}
+
+            {showExportButton && (
+              <button
+                className="export-btn"
+                onClick={handleExportExcel}
+                disabled={isExporting}
+              >
+                <FaFileExcel size={16} />
+                <span>{isExporting ? "Đang xuất..." : "Xuất Excel"}</span>
+              </button>
+            )}
+
             <div
               onClick={() => navigate(`${baseURL}/create`)}
               className="create-btn"
@@ -134,7 +210,7 @@ const Table = ({
 
         {/* Table Content */}
         <div className="table-container">
-          <table>
+          <table className="table-grid">
             {/* Table Header */}
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -201,7 +277,7 @@ const Table = ({
             </tbody>
 
             {/* Table Footer */}
-            <tfoot/>
+            <tfoot />
           </table>
         </div>
 
@@ -212,45 +288,58 @@ const Table = ({
             onClick={() => table.setPageIndex(0)}
             disabled={!table.getCanPreviousPage()}
           >
-            {"<<"}
+            <span aria-hidden="true">«</span>
           </button>
           <button
             className="pagination-btn"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
-            {"<"}
+            <span aria-hidden="true">‹</span>
           </button>
-          {Array.from({ length: table.getPageCount() }, (_, index) => (
-            <button
-              key={index}
-              className="pagination-btn index-btn"
-              onClick={() => table.setPageIndex(index)}
-            >
-              {index + 1}
-            </button>
-          ))}
+
+          {/* Show only 5 page buttons */}
+          {Array.from({ length: Math.min(5, table.getPageCount()) }, (_, i) => {
+            const pageIndex = table.getState().pagination.pageIndex;
+            let buttonIndex;
+
+            if (table.getPageCount() <= 5) {
+              buttonIndex = i;
+            } else if (pageIndex < 3) {
+              buttonIndex = i;
+            } else if (pageIndex > table.getPageCount() - 3) {
+              buttonIndex = table.getPageCount() - 5 + i;
+            } else {
+              buttonIndex = pageIndex - 2 + i;
+            }
+
+            return (
+              <button
+                key={buttonIndex}
+                className={`pagination-btn ${
+                  pageIndex === buttonIndex ? "active-page" : ""
+                }`}
+                onClick={() => table.setPageIndex(buttonIndex)}
+              >
+                {buttonIndex + 1}
+              </button>
+            );
+          })}
+
           <button
             className="pagination-btn"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
-            {">"}
+            <span aria-hidden="true">›</span>
           </button>
           <button
             className="pagination-btn"
             onClick={() => table.setPageIndex(table.getPageCount() - 1)}
             disabled={!table.getCanNextPage()}
           >
-            {">>"}
+            <span aria-hidden="true">»</span>
           </button>
-          <span className="page-number">
-            <div>Trang</div>
-            <strong>
-              {table.getState().pagination.pageIndex + 1} trên{" "}
-              {table.getPageCount()}
-            </strong>
-          </span>
         </div>
       </div>
 

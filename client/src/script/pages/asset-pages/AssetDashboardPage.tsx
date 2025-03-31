@@ -10,7 +10,6 @@ import { getUserList, User } from "../../interfaces/User";
 import { Room, getRoomList } from "../../interfaces/Room";
 import { useState } from "react";
 
-
 const AssetDashboardPage = () => {
   const mainRef = useMainRef();
   const { refreshAccessToken, accessToken } = useAuth();
@@ -78,7 +77,9 @@ const AssetDashboardPage = () => {
   return (
     <main className="dashboard-page" ref={mainRef}>
       <div className="dashboard-header">
-        <div className="title">Danh Sách Tài Sản</div>
+        <div className="title-section">
+          <h1 className="title">Danh Sách Tài Sản</h1>
+        </div>
       </div>
 
       {isLoadingAsset ||
@@ -93,6 +94,8 @@ const AssetDashboardPage = () => {
           baseURL="/asset-dashboard"
           roomList={roomList}
           onRoomSelect={setSelectedRoom}
+          showExportButton={true}
+          exportEndpoint="/export/export"
         />
       )}
     </main>

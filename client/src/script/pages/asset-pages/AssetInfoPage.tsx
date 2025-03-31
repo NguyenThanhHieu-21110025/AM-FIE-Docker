@@ -309,17 +309,13 @@ const AssetInfoPage = () => {
         responsible_user: getUserId(filteredData.responsible_user),
       };
   
-      console.log("Sending update data:", assetRequest);
-  
       // Gọi API để cập nhật tài sản
       const success = await updateAsset(id, assetRequest, token);
   
       if (success) {
         alert("Cập nhật tài sản thành công");
-        setMode("info");
-        
-        // Tải lại trang để hiển thị dữ liệu mới
-        window.location.reload();
+        // Navigate to dashboard instead of reloading
+        navigate("/asset-dashboard");
       } else {
         alert("Không thể cập nhật tài sản. Vui lòng thử lại!");
       }
