@@ -2,38 +2,192 @@ import React, { useState } from "react";
 import "../../../css/AuthPages.css";
 import { MdOutlineEmail } from "react-icons/md";
 import { FaLock } from "react-icons/fa";
+import { IoCheckmarkCircle, IoWarning } from "react-icons/io5";
 import f1Building from "../../../assets/F1.jpg";
 import hcmuteLogo from "../../../assets/hcmute-logo.png";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useMainRef, useScrollToMain } from "../../context/MainRefContext";
 import AuthPageWrapper from "../../components/AuthPageWrapper";
 import OTPInput from "../../components/OTPInput";
+import authService from "../../services/authService";
 
 const ForgotPassword = () => {
+  const navigate = useNavigate();
   const mainRef = useMainRef();
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
   const [email, setEmail] = useState("");
   const [step, setStep] = useState<"email" | "code" | "newPassword">("email");
   const [verificationCode, setVerificationCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [resendDisabled, setResendDisabled] = useState(false);
+  const [countdown, setCountdown] = useState(60);
   const ICON_SIZE = 32;
 
   useScrollToMain();
 
-  const handleSubmitEmail = (e: React.FormEvent) => {
-    e.preventDefault();
-    setStep("code");
+  // Email validation
+  const isValidEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
-  const handleSubmitCode = (e: React.FormEvent) => {
-    e.preventDefault();
-    setStep("newPassword");
+  // Password validation
+  const isValidPassword = (password: string) => {
+    return password.length >= 8;
   };
 
-  const handleResetPassword = (e: React.FormEvent) => {
+  // Handle countdown for resend button
+  const startResendCountdown = () => {
+    setResendDisabled(true);
+    setCountdown(60);
+    
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setResendDisabled(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleSubmitEmail = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement password reset logic
+    setError("");
+    setSuccess("");
+    
+    if (!email) {
+      setError("Vui lòng nhập email");
+      return;
+    }
+    
+    if (!isValidEmail(email)) {
+      setError("Email không đúng định dạng");
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      const response = await authService.requestPasswordReset(email);
+      
+      if (response.data.status === "success") {
+        setSuccess(response.data.message || "Mã xác thực đã được gửi đến email của bạn");
+        setStep("code");
+        startResendCountdown();
+      }
+    } catch (err: any) {
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
+      } else {
+        setError("Có lỗi xảy ra. Vui lòng thử lại sau");
+      }
+      console.error("Error requesting password reset:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmitCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    
+    if (verificationCode.length !== 6) {
+      setError("Vui lòng nhập đầy đủ mã xác thực");
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      const response = await authService.verifyResetCode(email, verificationCode);
+      
+      if (response.data.status === "success") {
+        setSuccess("Mã xác thực hợp lệ");
+        setStep("newPassword");
+      }
+    } catch (err: any) {
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
+      } else {
+        setError("Mã xác thực không hợp lệ");
+      }
+      console.error("Error verifying code:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    setError("");
+    setSuccess("");
+    setLoading(true);
+    
+    try {
+      const response = await authService.requestPasswordReset(email);
+      
+      if (response.data.status === "success") {
+        setSuccess("Đã gửi lại mã xác thực");
+        startResendCountdown();
+      }
+    } catch (err: any) {
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
+      } else {
+        setError("Có lỗi xảy ra khi gửi lại mã");
+      }
+      console.error("Error resending code:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    
+    if (!newPassword) {
+      setError("Vui lòng nhập mật khẩu mới");
+      return;
+    }
+    
+    if (!isValidPassword(newPassword)) {
+      setError("Mật khẩu phải có ít nhất 8 ký tự");
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      setError("Mật khẩu xác nhận không khớp");
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      const response = await authService.resetPassword(email, verificationCode, newPassword);
+      
+      if (response.data.status === "success") {
+        setSuccess("Đặt lại mật khẩu thành công!");
+        setTimeout(() => {
+          navigate("/login");
+        }, 2000);
+      }
+    } catch (err: any) {
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
+      } else {
+        setError("Có lỗi xảy ra khi đặt lại mật khẩu");
+      }
+      console.error("Error resetting password:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -57,6 +211,22 @@ const ForgotPassword = () => {
               />
             </div>
             <h1 className='title'>Quên mật khẩu</h1>
+            
+            {/* Error and success messages */}
+            {error && (
+              <div className="auth-message error">
+                <IoWarning size={20} />
+                <span>{error}</span>
+              </div>
+            )}
+            
+            {success && (
+              <div className="auth-message success">
+                <IoCheckmarkCircle size={20} />
+                <span>{success}</span>
+              </div>
+            )}
+            
             {step === "email" && (
               <div className="input-group">
                 <div className="input-area">
@@ -75,11 +245,12 @@ const ForgotPassword = () => {
                   </div>
                 </div>
                 <button
-                  className="submit-btn"
+                  className={`submit-btn ${loading ? 'loading' : ''}`}
                   onClick={handleSubmitEmail}
                   type="submit"
+                  disabled={loading}
                 >
-                  Gửi mã xác thực
+                  {loading ? 'Đang gửi...' : 'Gửi mã xác thực'}
                 </button>
               </div>
             )}
@@ -96,22 +267,22 @@ const ForgotPassword = () => {
                 <div className="resend-code">
                   <button
                     type="button"
-                    className="resend-button"
-                    onClick={() => {
-                      // TODO: Implement resend logic
-                      console.log("Resend code");
-                    }}
+                    className={`resend-button ${resendDisabled ? 'disabled' : ''}`}
+                    onClick={handleResendCode}
+                    disabled={resendDisabled || loading}
                   >
-                    Gửi lại mã xác thực
+                    {resendDisabled 
+                      ? `Gửi lại mã sau (${countdown}s)` 
+                      : 'Gửi lại mã xác thực'}
                   </button>
                 </div>
                 <button
-                  className="submit-btn"
+                  className={`submit-btn ${loading ? 'loading' : ''}`}
                   onClick={handleSubmitCode}
                   type="submit"
-                  disabled={verificationCode.length !== 6}
+                  disabled={verificationCode.length !== 6 || loading}
                 >
-                  Xác nhận
+                  {loading ? 'Đang kiểm tra...' : 'Xác nhận'}
                 </button>
               </div>
             )}
@@ -129,6 +300,7 @@ const ForgotPassword = () => {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       required
+                      minLength={8}
                     />
                     <div className="input-focus-line"></div>
                   </div>
@@ -148,12 +320,16 @@ const ForgotPassword = () => {
                     <div className="input-focus-line"></div>
                   </div>
                 </div>
+                <div className="password-requirements">
+                  <p>Mật khẩu phải có ít nhất 8 ký tự</p>
+                </div>
                 <button
-                  className="submit-btn"
+                  className={`submit-btn ${loading ? 'loading' : ''}`}
                   onClick={handleResetPassword}
                   type="submit"
+                  disabled={loading}
                 >
-                  Đổi mật khẩu
+                  {loading ? 'Đang xử lý...' : 'Đổi mật khẩu'}
                 </button>
               </div>
             )}

@@ -11,14 +11,48 @@ interface FilterSidebarProps {
 }
 
 export const FilterSidebar = ({ table, columns }: FilterSidebarProps) => {
+  // Fix: Only add to columnHeaders when accessorKey is defined
   const columnHeaders = columns.reduce((acc, column) => {
-    acc[column.accessorKey] = column.header;
+    // Handle nested columns
+    if (column.columns) {
+      column.columns.forEach(subColumn => {
+        if (subColumn.accessorKey) {
+          acc[subColumn.accessorKey] = subColumn.header;
+        }
+      });
+    }
+    
+    // Handle this column
+    if (column.accessorKey) {
+      acc[column.accessorKey] = column.header;
+    }
     return acc;
   }, {} as Record<string, string>);
+  
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleAllColumns = (value: boolean) => {
     table.toggleAllColumnsVisible(value);
+  };
+
+  // Helper function to get column header
+  const getColumnDisplayName = (column: any): string => {
+    // Try to find header in our mapping
+    if (column.id && columnHeaders[column.id]) {
+      return columnHeaders[column.id];
+    }
+    
+    // Check for a column header directly on the column
+    if (column.columnDef && column.columnDef.header) {
+      return typeof column.columnDef.header === 'string' 
+        ? column.columnDef.header 
+        : column.id;
+    }
+    
+    // Fallback to formatted column ID
+    return column.id 
+      ? column.id.charAt(0).toUpperCase() + column.id.slice(1).replace(/([A-Z])/g, ' $1').trim()
+      : 'Unknown';
   };
 
   return (
@@ -61,8 +95,7 @@ export const FilterSidebar = ({ table, columns }: FilterSidebarProps) => {
                     onChange={column.getToggleVisibilityHandler()}
                   />
                   <span>
-                    {columnHeaders[column.id] ||
-                      column.id.charAt(0).toUpperCase() + column.id.slice(1)}
+                    {getColumnDisplayName(column)}
                   </span>
                 </label>
               </div>

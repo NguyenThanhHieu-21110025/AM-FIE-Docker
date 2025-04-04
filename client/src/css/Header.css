@@ -17,6 +17,12 @@ header {
   align-items: center;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .nav-buttons {
   display: flex;
   gap: 16px;
@@ -140,4 +146,71 @@ header {
   background-color: #f8f9fa;
   color: rgb(11, 8, 158);
   padding-left: 28px;
+}
+
+/* Theme toggle container */
+.theme-toggle-container {
+  display: flex;
+  align-items: center;
+  margin: 0 16px;
+}
+
+/* For proper layout, update the header-section if needed */
+.header-section {
+  /* Keep your existing styles */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Add media query for smaller screens */
+@media (max-width: 768px) {
+  .header-section {
+    padding: 0 16px;
+  }
+  
+  .theme-toggle-container {
+    margin: 0 8px;
+  }
+}
+
+/* Remove the separate theme-toggle-container - no longer needed */
+.theme-toggle-container {
+  display: none;
+}
+
+/* Update switch size in the header */
+.header-section .switch {
+  /* Increase size from 0.8 to 1.0 (or a larger value like 1.2 for even bigger) */
+  transform: scale(1.0);
+  cursor: pointer;
+}
+
+/* Make sure colors align with header gradient background */
+.header-section .switch__icon {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.header-section .switch__input {
+  background-color: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.header-section .switch__input:checked {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.header-section .switch__inner:before {
+  background-color: rgb(21, 18, 168);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .header-right {
+    gap: 8px;
+  }
+  
+  .header-section .switch {
+    transform: scale(0.9);
+  }
 }

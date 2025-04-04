@@ -3,7 +3,7 @@ import { useMainRef, useScrollToMain } from "../../context/MainRefContext";
 import { useAuth } from "../../context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { Asset, getAssetList } from "../../interfaces/Asset";
+import { getAssetList } from "../../interfaces/Asset";
 import { Room, getRoomList } from "../../interfaces/Room";
 import { User, getUserList } from "../../interfaces/User";
 import Loader from "../../components/Loader";
@@ -27,6 +27,7 @@ interface StatCard {
   value: string | number;
   icon: React.ReactNode;
   color: string;
+  bgColor: string;
 }
 
 interface AssetsByRoom {
@@ -39,13 +40,14 @@ interface AssetsByValue {
   quantity: number;
 }
 
+// More ShadCN-like colors (muted, harmonious)
 const COLORS = [
-  "#0088FE",
-  "#00C49F",
-  "#FFBB28",
-  "#FF8042",
-  "#8884d8",
-  "#82ca9d",
+  "#2563eb", // blue
+  "#10b981", // green
+  "#f59e0b", // amber
+  "#f97316", // orange
+  "#8b5cf6", // violet
+  "#ec4899", // pink
 ];
 
 const AssetStatisticsPage = () => {
@@ -69,6 +71,7 @@ const AssetStatisticsPage = () => {
     assetsByValue: [],
   });
 
+  // Data loading queries - no changes needed here
   const { data: userList, isLoading: isLoadingUser } = useQuery({
     queryFn: async () => {
       const token = (await refreshAccessToken()) || accessToken;
@@ -102,25 +105,22 @@ const AssetStatisticsPage = () => {
   useEffect(() => {
     if (!assetList) return;
 
-    // Calculate total assets
+    // Calculate stats - no changes needed here
     const totalAssets = assetList.reduce(
       (sum, asset) => sum + (asset.accounting?.quantity || 0),
       0
     );
 
-    // Calculate total value
     const totalValue = assetList.reduce(
       (sum, asset) => sum + (asset.accounting?.origin_price || 0),
       0
     );
 
-    // Calculate remaining value after depreciation
     const remainingValue = assetList.reduce(
       (sum, asset) => sum + (asset.remaining_value || 0),
       0
     );
 
-    // Get unique rooms with assets
     const usedRooms = new Set(
       assetList
         .map((asset) =>
@@ -131,7 +131,6 @@ const AssetStatisticsPage = () => {
         .filter(Boolean)
     );
 
-    // Group assets by room for pie chart
     const roomAssetMap = new Map<string, number>();
 
     assetList.forEach((asset) => {
@@ -196,30 +195,35 @@ const AssetStatisticsPage = () => {
     });
   }, [assetList, roomList]);
 
+  // Updated stat cards with ShadCN-style colors
   const statCards: StatCard[] = [
     {
       title: "Tổng số tài sản",
       value: stats.totalAssets,
-      icon: <FaWarehouse size={30} />,
-      color: "#0088FE",
+      icon: <FaWarehouse size={24} />,
+      color: "#2563eb",
+      bgColor: "rgba(37, 99, 235, 0.1)",
     },
     {
       title: "Nguyên giá",
       value: formatPrice(stats.totalValue),
-      icon: <FaCoins size={30} />,
-      color: "#00C49F",
+      icon: <FaCoins size={24} />,
+      color: "#10b981",
+      bgColor: "rgba(16, 185, 129, 0.1)",
     },
     {
       title: "Giá trị còn lại",
       value: formatPrice(stats.remainingValue),
-      icon: <FaTools size={30} />,
-      color: "#FFBB28",
+      icon: <FaTools size={24} />,
+      color: "#f59e0b",
+      bgColor: "rgba(245, 158, 11, 0.1)",
     },
     {
       title: "Phòng có tài sản",
       value: stats.uniqueRooms,
-      icon: <FaBuilding size={30} />,
-      color: "#FF8042",
+      icon: <FaBuilding size={24} />,
+      color: "#8b5cf6",
+      bgColor: "rgba(139, 92, 246, 0.1)",
     },
   ];
 
@@ -231,15 +235,11 @@ const AssetStatisticsPage = () => {
     <main ref={mainRef} className="dashboard-page">
       <h1 className="title">Thống kê tài sản</h1>
       <div className="dashboard-container">
-        {/* Stats Cards */}
+        {/* Stats Cards - ShadCN style */}
         <div className="stats-cards">
           {statCards.map((card, index) => (
-            <div
-              key={index}
-              className="stat-card"
-              style={{ borderLeft: `4px solid ${card.color}` }}
-            >
-              <div className="stat-icon" style={{ color: card.color }}>
+            <div key={index} className="stat-card">
+              <div className="stat-icon" style={{ backgroundColor: card.bgColor, color: card.color }}>
                 {card.icon}
               </div>
               <div className="stat-content">
@@ -250,7 +250,7 @@ const AssetStatisticsPage = () => {
           ))}
         </div>
 
-        {/* Charts Section */}
+        {/* Charts Section - ShadCN style */}
         <div className="charts-grid">
           {/* Pie Chart */}
           <div className="chart-container">
@@ -273,13 +273,27 @@ const AssetStatisticsPage = () => {
                     <Cell
                       key={`cell-${index}`}
                       fill={COLORS[index % COLORS.length]}
+                      stroke="var(--card)"
+                      strokeWidth={2}
                     />
                   ))}
                 </Pie>
                 <Tooltip
                   formatter={(value) => [`${value} tài sản`, "Số lượng"]}
+                  contentStyle={{ 
+                    backgroundColor: 'var(--card)',
+                    borderColor: 'var(--border)',
+                    borderRadius: 'var(--radius)',
+                    color: 'var(--card-foreground)'
+                  }}
                 />
-                <Legend />
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={36}
+                  formatter={(value) => (
+                    <span style={{ color: 'var(--card-foreground)' }}>{value}</span>
+                  )}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -289,16 +303,38 @@ const AssetStatisticsPage = () => {
             <h2>Tài sản theo giá trị</h2>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={stats.assetsByValue}>
-                <XAxis dataKey="range" />
-                <YAxis />
+                <XAxis 
+                  dataKey="range" 
+                  tick={{ fill: 'var(--card-foreground)' }}
+                  axisLine={{ stroke: 'var(--border)' }}
+                />
+                <YAxis 
+                  tick={{ fill: 'var(--card-foreground)' }}
+                  axisLine={{ stroke: 'var(--border)' }}
+                  tickLine={{ stroke: 'var(--border)' }}
+                />
                 <Tooltip
                   formatter={(value) => [`${value} tài sản`, "Số lượng"]}
+                  contentStyle={{ 
+                    backgroundColor: 'var(--card)',
+                    borderColor: 'var(--border)',
+                    borderRadius: 'var(--radius)',
+                    color: 'var(--card-foreground)'
+                  }}
                 />
-                <Legend />
+                <Legend 
+                  verticalAlign="top"
+                  height={36}
+                  formatter={(value) => (
+                    <span style={{ color: 'var(--card-foreground)' }}>{value}</span>
+                  )}
+                />
                 <Bar
                   dataKey="quantity"
                   name="Số lượng tài sản"
-                  fill="#8884d8"
+                  fill="#2563eb"
+                  radius={[4, 4, 0, 0]}
+                  barSize={40}
                 />
               </BarChart>
             </ResponsiveContainer>

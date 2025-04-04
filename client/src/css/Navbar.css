@@ -4,6 +4,8 @@
   display: grid;
   grid-template-columns: 280px 1fr;
   background-color: #f8fafc;
+  /* Add transition for smooth theme switching */
+  transition: background-color 0.3s ease;
 }
 
 .navbar-bg {
@@ -13,7 +15,10 @@
   padding: 80px 0;
   background-color: white;
   box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
+  /* Add transition for smooth theme switching */
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
+
 
 .navbar-container {
   border: none;
@@ -70,4 +75,37 @@
 .navbar-menu li.active {
   background-color: #eff6ff;
   color: #3b82f6;
+}
+
+.dark .ams-body {
+  background-color: #020817; /* Dark background matching ShadCN dark theme */
+}
+
+.dark .navbar-bg {
+  background-color: #1e293b; /* Dark navbar background */
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.2);
+  height: auto; /* Full height for dark theme */
+}
+
+.dark .ute-logo h1 {
+  color: #f8fafc; /* Light text for dark theme */
+}
+
+.dark .navbar-menu li {
+  color: #94a3b8; /* Lighter text for menu items */
+}
+
+.dark .navbar-menu li:hover {
+  background-color: #334155; /* Darker hover background */
+  color: #60a5fa; /* Brighter blue on hover */
+}
+
+.dark .navbar-menu li.active {
+  background-color: #1e3a8a; /* Dark blue background for active item */
+  color: #60a5fa; /* Brighter blue text for active item */
+}
+
+/* Transitions for all elements */
+.navbar-bg, .navbar-menu li, .ute-logo h1 {
+  transition: background-color 0.3s ease, color 0.3s ease;
 }

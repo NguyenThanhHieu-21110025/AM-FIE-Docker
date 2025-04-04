@@ -1,17 +1,19 @@
-/* ========== 1. VARIABLES ========== */
+/* ========== 1. THEME VARIABLES ========== */
 :root {
-  /* Primary Colors - Minimalist palette */
+  /* Color palette - Light theme */
   --color-background: #f9fafb;
   --color-white: #ffffff;
   --color-surface-light: #f3f4f6;
   --color-surface: #e5e7eb;
+  --color-border: #e5e7eb;
+  --color-border-focus: #a5b4fc;
   
-  /* Text Colors - Reduced contrast */
+  /* Text colors */
   --color-text-primary: #111827;
   --color-text-secondary: #374151;
   --color-text-tertiary: #6b7280;
   
-  /* Accent Colors - Flat & desaturated */
+  /* Accent colors */
   --color-primary: #4f46e5;
   --color-primary-light: #e0e7ff;
   --color-success: #10b981;
@@ -21,7 +23,7 @@
   --color-warning: #f59e0b;
   --color-warning-light: #fffbeb;
   
-  /* Section Colors - More subtle */
+  /* Section colors */
   --color-accounting: #f3f6ff;
   --color-accounting-border: #818cf8;
   --color-differential: #f0fdf4;
@@ -29,11 +31,7 @@
   --color-depreciation: #fef2f2;
   --color-depreciation-border: #f87171;
   
-  /* Border Colors */
-  --color-border: #e5e7eb;
-  --color-border-focus: #a5b4fc;
-  
-  /* Spacing - Consistent system */
+  /* Spacing scale */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 16px;
@@ -41,10 +39,44 @@
   --spacing-xl: 32px;
   --spacing-2xl: 48px;
   
-  /* Border Radius - More subtle */
+  /* Border radius */
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
+
+  /* Transitions */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+}
+
+/* Dark theme variable overrides */
+.dark {
+  --color-background: #09090b; /* slate-950 */
+  --color-white: #1c1c24; /* slate-900 */
+  --color-surface-light: #17171d; /* slate-850 */
+  --color-surface: #27272e; /* slate-800 */
+  --color-border: #27272e; /* slate-800 */
+  --color-border-focus: #818cf8; /* indigo-400 */
+  
+  --color-text-primary: #f1f5f9; /* slate-100 */
+  --color-text-secondary: #e2e8f0; /* slate-200 */
+  --color-text-tertiary: #94a3b8; /* slate-400 */
+  
+  --color-primary: #6366f1; /* indigo-500 */
+  --color-primary-light: #1e1b4b; /* indigo-950 */
+  --color-success: #10b981; /* emerald-500 */
+  --color-success-light: #064e3b; /* emerald-950 */
+  --color-danger: #ef4444; /* red-500 */
+  --color-danger-light: #450a0a; /* red-950 */
+  --color-warning: #f59e0b; /* amber-500 */
+  --color-warning-light: #451a03; /* amber-950 */
+  
+  --color-accounting: #1e1b4b; /* indigo-950 */
+  --color-accounting-border: #818cf8; /* indigo-400 */
+  --color-differential: #064e3b; /* emerald-950 */
+  --color-differential-border: #34d399; /* emerald-400 */
+  --color-depreciation: #450a0a; /* red-950 */
+  --color-depreciation-border: #f87171; /* red-400 */
 }
 
 /* ========== 2. BASE LAYOUT ========== */
@@ -65,7 +97,16 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   margin: auto;
   height: fit-content;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
+}
+
+.info-body {
+  font-size: 15px;
+  font-weight: 400;
+  padding: 0 var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
 }
 
 /* ========== 3. TYPOGRAPHY ========== */
@@ -98,16 +139,24 @@
   color: var(--color-danger);
 }
 
-/* ========== 4. GRID AND LAYOUTS ========== */
-.info-body {
-  font-size: 15px;
-  font-weight: 400;
-  padding: 0 var(--spacing-lg);
+/* Section dividers */
+.section-divider {
+  grid-column: 1 / -1;
+  margin: var(--spacing-lg) 0 var(--spacing-md) 0;
+  padding-bottom: var(--spacing-xs);
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-lg);
+  align-items: center;
 }
 
+.section-divider::after {
+  content: "";
+  flex-grow: 1;
+  height: 1px;
+  background-color: var(--color-border);
+  margin-left: var(--spacing-md);
+}
+
+/* ========== 4. GRID LAYOUTS ========== */
 /* Standard 3-column grid */
 .normal-info {
   display: grid;
@@ -134,29 +183,14 @@
   width: 100%;
 }
 
-/* Section dividers */
-.section-divider {
-  grid-column: 1 / -1;
-  margin: var(--spacing-lg) 0 var(--spacing-md) 0;
-  padding-bottom: var(--spacing-xs);
-  display: flex;
-  align-items: center;
-}
-
-.section-divider::after {
-  content: "";
-  flex-grow: 1;
-  height: 1px;
-  background-color: var(--color-border);
-  margin-left: var(--spacing-md);
-}
-
 /* ========== 5. FORM ELEMENTS ========== */
+/* Container styling */
 .info-page .info-container {
+  position: relative;
   padding: var(--spacing-md);
   background-color: var(--color-surface-light);
   border-radius: var(--radius-md);
-  transition: background-color 0.2s ease;
+  transition: background-color var(--transition-fast);
   width: 100%;
 }
 
@@ -164,6 +198,7 @@
   background-color: var(--color-surface);
 }
 
+/* Form inputs */
 .info-page input,
 .info-page select,
 .info-page textarea {
@@ -174,7 +209,8 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   width: 100%;
-  transition: border-color 0.2s ease;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
 
 .info-page input:focus,
@@ -182,7 +218,8 @@
 .info-page textarea:focus {
   outline: none;
   border-color: var(--color-border-focus);
-  box-shadow: 0 0 0 2px rgba(165, 180, 252, 0.1);
+  box-shadow: 0 0 0 2px rgba(165, 180, 252, 0.2), 
+              inset 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
 
 .info-page input[disabled],
@@ -192,16 +229,53 @@
   color: var(--color-text-tertiary);
   cursor: not-allowed;
   border-color: var(--color-border);
+  opacity: 0.75;
 }
 
-/* Textarea specific styles */
+/* Textarea specific */
 .two-column-row .column textarea {
   min-height: 100px;
   resize: vertical;
 }
 
+/* Paragraph styling for read-only mode */
+.info-page .info-container p {
+  background-color: var(--color-white);
+  color: var(--color-text-primary);
+  font-size: 15px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  width: 100%;
+  min-height: 38px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.info-page .info-container p:empty::before,
+.info-page .info-container p:contains("Không có")::before {
+  content: "Không có";
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+.info-page .info-container p.multiline {
+  min-height: 100px;
+  white-space: pre-wrap;
+  overflow: auto;
+  align-items: flex-start;
+}
+
+.info-page .info-container .specifications-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ========== 6. SECTION STYLES ========== */
-/* Base section styles - Simplified */
+/* Base section styles */
 .accounting-section,
 .differential-section,
 .depreciation-section {
@@ -215,7 +289,7 @@
   margin-bottom: var(--spacing-md);
 }
 
-/* Specific section styles - More subtle */
+/* Specific section styles */
 .accounting-section {
   background-color: var(--color-accounting);
   border-left-color: var(--color-accounting-border);
@@ -231,8 +305,31 @@
   border-left-color: var(--color-depreciation-border);
 }
 
+/* Dark mode section styling */
+.dark .accounting-section,
+.dark .differential-section,
+.dark .depreciation-section {
+  background-color: transparent;
+  border: 1px solid;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.dark .accounting-section {
+  border-color: var(--color-accounting-border);
+  background-color: rgba(129, 140, 248, 0.05);
+}
+
+.dark .differential-section {
+  border-color: var(--color-differential-border);
+  background-color: rgba(52, 211, 153, 0.05);
+}
+
+.dark .depreciation-section {
+  border-color: var(--color-depreciation-border);
+  background-color: rgba(248, 113, 113, 0.05);
+}
+
 /* ========== 7. BUTTON STYLES ========== */
-/* Button container */
 .info-page .button-container {
   padding: var(--spacing-xl) 0 var(--spacing-md) 0;
   display: flex;
@@ -240,18 +337,18 @@
   gap: var(--spacing-md);
 }
 
-/* Common button styles - Flat design */
+/* Common button styles */
 .info-page .button-container button {
   padding: var(--spacing-sm) var(--spacing-lg);
   border-radius: var(--radius-sm);
   font-size: 15px;
   font-weight: 500;
-  transition: background-color 0.2s ease;
+  transition: background-color var(--transition-fast);
   border: none;
   color: var(--color-white);
 }
 
-/* Submit button */
+/* Button variants */
 .info-page .submit-btn {
   background-color: var(--color-success);
 }
@@ -260,7 +357,6 @@
   background-color: #0ea572;
 }
 
-/* Update button */
 .info-page .update-btn {
   background-color: var(--color-primary);
 }
@@ -269,7 +365,6 @@
   background-color: #4338ca;
 }
 
-/* Delete button */
 .info-page .delete-btn {
   background-color: var(--color-danger);
 }
@@ -278,7 +373,6 @@
   background-color: #dc2626;
 }
 
-/* Cancel button */
 .info-page .cancel-btn {
   background-color: var(--color-text-tertiary);
 }
@@ -287,7 +381,7 @@
   background-color: #4b5563;
 }
 
-/* Back button - More subtle */
+/* Back button */
 .info-page .back-button {
   display: flex;
   align-items: center;
@@ -296,7 +390,7 @@
   font-size: 15px;
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: color 0.2s ease;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
   padding: var(--spacing-sm) var(--spacing-md);
   border-radius: var(--radius-sm);
 }
@@ -354,19 +448,113 @@
   font-size: 0.9em;
 }
 
-/* ========== 9. ANIMATIONS ========== */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* ========== 9. DARK MODE OVERRIDES ========== */
+/* Dark mode input styling */
+.dark .info-page input,
+.dark .info-page select,
+.dark .info-page textarea {
+  background-color: #17171d; /* slate-850 */
+  border-color: #3f3f46; /* zinc-700 */
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
-/* ========== 10. MEDIA QUERIES ========== */
+.dark .info-page input:focus,
+.dark .info-page select:focus,
+.dark .info-page textarea:focus {
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2), 
+              inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.dark .info-page input[disabled],
+.dark .info-page select[disabled],
+.dark .info-page textarea[disabled] {
+  background-color: #09090b; /* slate-950 */
+  color: #64748b; /* slate-500 */
+  border-color: #27272e; /* slate-800 */
+}
+
+/* Dark mode hover effects */
+.dark .info-page .info-container:hover {
+  background-color: #27272e; /* slate-800 */
+}
+
+.dark .info-page .info-container:hover input,
+.dark .info-page .info-container:hover select,
+.dark .info-page .info-container:hover textarea {
+  border-color: #4b5563; /* gray-600 */
+}
+
+/* Dark mode paragraph styling */
+.dark .info-page .info-container p {
+  background-color: #17171d; /* slate-850 */
+  color: var(--color-text-primary);
+  border: 1px solid #3f3f46; /* zinc-700 */
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+/* Dark mode button styling */
+.dark .info-page .submit-btn {
+  background-color: #059669; /* emerald-600 */
+}
+
+.dark .info-page .submit-btn:hover {
+  background-color: #10b981; /* emerald-500 */
+}
+
+.dark .info-page .update-btn {
+  background-color: #4f46e5; /* indigo-600 */
+}
+
+.dark .info-page .update-btn:hover {
+  background-color: #6366f1; /* indigo-500 */
+}
+
+.dark .info-page .delete-btn {
+  background-color: #dc2626; /* red-600 */
+}
+
+.dark .info-page .delete-btn:hover {
+  background-color: #ef4444; /* red-500 */
+}
+
+.dark .info-page .cancel-btn {
+  background-color: #4b5563; /* gray-600 */
+}
+
+.dark .info-page .cancel-btn:hover {
+  background-color: #6b7280; /* gray-500 */
+}
+
+/* Dark mode back button */
+.dark .info-page .back-button:hover {
+  color: #6366f1; /* indigo-500 */
+  background-color: #17171d; /* slate-850 */
+}
+
+/* Dark mode autocomplete */
+.dark .autocomplete-suggestions {
+  background-color: #1c1c24; /* slate-900 */
+  border-color: #27272e; /* slate-800 */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.dark .suggestion-item {
+  border-bottom-color: #27272e; /* slate-800 */
+}
+
+.dark .suggestion-item:hover, 
+.dark .suggestion-item.highlighted {
+  background-color: #17171d; /* slate-850 */
+}
+
+/* ========== 10. ANIMATIONS ========== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ========== 11. MEDIA QUERIES ========== */
 @media (max-width: 1280px) {
   .normal-info,
   .accounting-section,

@@ -192,7 +192,7 @@ export async function createAsset(asset: AssetRequest, token: string) {
 }
 
 export async function updateAsset(
-  id: string,  // Đổi từ _id thành id để nhất quán với cách sử dụng trong AssetInfoPage
+  id: string,  
   asset: AssetRequest,
   token: string
 ): Promise<boolean> {
@@ -201,7 +201,7 @@ export async function updateAsset(
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        token: `Bearer ${token}`,  // Đảm bảo dùng 'token' thay vì 'Authorization'
+        token: `Bearer ${token}`,  
       },
       body: JSON.stringify(asset),
     });

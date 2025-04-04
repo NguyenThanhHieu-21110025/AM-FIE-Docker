@@ -108,12 +108,12 @@ const LoginPage = () => {
             Đăng Nhập
           </button>
 
-          <div className="register-section">
+          {/* <div className="register-section">
             <p>Nếu bạn là người mới, hãy nhấn vào nút phía dưới.</p>
             <Link to="/register">
               <p className="register-btn">Tạo tài khoản mới</p>
             </Link>
-          </div>
+          </div> */}
         </form>
       </div>
     </main>

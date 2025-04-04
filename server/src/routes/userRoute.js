@@ -10,7 +10,9 @@ router.get("/:id", middlewareController.verifyToken, userController.getUserById)
 router.put("/active/:id", middlewareController.verifyTokenAndAdminAuth, userController.isActive);
 router.put("/:id", middlewareController.verifyToken, userController.updateUser);  
 router.delete("/:id", middlewareController.verifyTokenAndAdminAuth, userController.deleteUser);
-router.post("/reset-password/:id", middlewareController.verifyToken, userController.resetPassword);
+router.post("/request-password-reset", userController.requestPasswordReset);
+router.post("/verify-reset-code", userController.verifyResetCode);
+router.post("/reset-password", userController.resetPassword);
 
 
 module.exports = router;

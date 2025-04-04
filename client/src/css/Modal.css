@@ -1,3 +1,4 @@
+/* ========== BASE MODAL STYLES ========== */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -51,123 +52,219 @@
 }
 
 .modal-body {
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-  
-  .room-search {
-    position: relative;
-    background: white;
-    width: 100%;
-  }
-  
-  .room-search input {
-    width: 100%;
-    padding: 8px 12px;
-    padding-right: 36px;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    font-size: 14px;
-  }
-  
-  .room-search .search-icon {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #9ca3af;
-  }
-  
-  .room-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    max-height: 300px;
-    overflow-y: auto;
-    padding-right: 8px;
-  }
-  
-  .room-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 12px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    background-color: #f9fafb;
-  }
-  
-  .room-item:hover {
-    background-color: #f3f4f6;
-  }
-  
-  .room-item input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
-  }
-  
-  .room-text {
-    font-size: 14px;
-    color: #1f2937;
-    user-select: none;
-  }
-  
-  .modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    padding-top: 16px;
-    border-top: 1px solid #e5e7eb;
-  }
-  
-  .apply-btn, .cancel-btn {
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-  
-  .apply-btn {
-    background-color: #10b981;
-    color: white;
-    border: none;
-  }
-  
-  .apply-btn:hover {
-    background-color: #059669;
-  }
-  
-  .cancel-btn {
-    background-color: #f3f4f6;
-    color: #4b5563;
-    border: 1px solid #e5e7eb;
-  }
-  
-  .cancel-btn:hover {
-    background-color: #e5e7eb;
-  }
-  
-  /* Custom scrollbar for room list */
-  .room-list::-webkit-scrollbar {
-    width: 6px;
-  }
-  
-  .room-list::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-  }
-  
-  .room-list::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 3px;
-  }
-  
-  .room-list::-webkit-scrollbar-thumb:hover {
-    background: #a1a1a1;
-  }
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.room-search {
+  position: relative;
+  background: white;
+  width: 100%;
+}
+
+.room-search input {
+  width: 100%;
+  padding-right: 36px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.room-search .search-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
+
+.room-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.room-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: #f9fafb;
+}
+
+.room-item:hover {
+  background-color: #f3f4f6;
+}
+
+.room-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.room-text {
+  font-size: 14px;
+  color: #1f2937;
+  user-select: none;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.apply-btn, .cancel-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.apply-btn {
+  background-color: #10b981;
+  color: white;
+  border: none;
+}
+
+.apply-btn:hover {
+  background-color: #059669;
+}
+
+.cancel-btn {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+}
+
+.cancel-btn:hover {
+  background-color: #e5e7eb;
+}
+
+/* Custom scrollbar for room list */
+.room-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.room-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.room-list::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.room-list::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* ========== DARK THEME ========== */
+.dark .modal-overlay {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.dark .modal-content {
+  background-color: #1c1c24; /* slate-900 */
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  border: 1px solid #27272e; /* slate-800 */
+}
+
+.dark .modal-header {
+  border-bottom: 1px solid #27272e; /* slate-800 */
+}
+
+.dark .modal-header h2 {
+  color: #f1f5f9; /* slate-100 */
+}
+
+.dark .close-btn {
+  color: #94a3b8; /* slate-400 */
+}
+
+.dark .close-btn:hover {
+  background-color: #27272e; /* slate-800 */
+  color: #e2e8f0; /* slate-200 */
+}
+
+.dark .room-search {
+  background: #1c1c24; /* slate-900 */
+}
+
+.dark .room-search input {
+  background-color: #17171d; /* slate-850 */
+  border-color: #3f3f46; /* zinc-700 */
+  color: #f1f5f9; /* slate-100 */
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.dark .room-search input:focus {
+  border-color: #818cf8; /* indigo-400 */
+  outline: none;
+}
+
+.dark .room-search .search-icon {
+  color: #64748b; /* slate-500 */
+}
+
+.dark .room-item {
+  background-color: #17171d; /* slate-850 */
+  border: 1px solid transparent;
+}
+
+.dark .room-item:hover {
+  background-color: #27272e; /* slate-800 */
+  border-color: #3f3f46; /* zinc-700 */
+}
+
+.dark .room-text {
+  color: #e2e8f0; /* slate-200 */
+}
+
+.dark .modal-footer {
+  border-top: 1px solid #27272e; /* slate-800 */
+}
+
+.dark .apply-btn {
+  background-color: #059669; /* emerald-600 */
+}
+
+.dark .apply-btn:hover {
+  background-color: #10b981; /* emerald-500 */
+}
+
+.dark .cancel-btn {
+  background-color: #27272e; /* slate-800 */
+  color: #e2e8f0; /* slate-200 */
+  border-color: #3f3f46; /* zinc-700 */
+}
+
+.dark .cancel-btn:hover {
+  background-color: #3f3f46; /* zinc-700 */
+}
+
+/* Dark mode custom scrollbar */
+.dark .room-list::-webkit-scrollbar-track {
+  background: #17171d; /* slate-850 */
+}
+
+.dark .room-list::-webkit-scrollbar-thumb {
+  background: #3f3f46; /* zinc-700 */
+}
+
+.dark .room-list::-webkit-scrollbar-thumb:hover {
+  background: #52525b; /* zinc-600 */
+}

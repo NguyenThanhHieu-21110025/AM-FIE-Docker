@@ -3,10 +3,12 @@ import uteFullName from "../../../../assets/uteFullName.png";
 import DropdownLogin from "./DropdownLogin";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FaHome, FaChartBar } from "react-icons/fa";
+import ThemeToggle from "../../../components/ThemeToggle";
 
 function Header() {
   const location = useLocation();
   const navigate = useNavigate();
+  
   const showUTEFullLogo =
     location.pathname === "/" ||
     location.pathname === "/login" ||
@@ -27,7 +29,12 @@ function Header() {
             Bảng điều khiển
           </button>
         </div>
-        <DropdownLogin />
+        
+        {/* Right side with theme toggle and dropdown */}
+        <div className="header-right">
+          <ThemeToggle />
+          <DropdownLogin />
+        </div>
       </div>
       {showUTEFullLogo && (
         <div className="logo-section">
