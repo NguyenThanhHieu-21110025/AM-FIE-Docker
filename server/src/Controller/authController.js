@@ -1,8 +1,7 @@
 const User = require("../models/userModel");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-
-let refreshTokens = [];
+const TokenModel = require("../models/tokenModel");
 
 const authController = {
     registerUser: async (req, res) => {
@@ -17,9 +16,28 @@ const authController = {
             });
 
             const user = await newUser.save();
-            res.status(201).json(user);
+
+            const accessToken = authController.generateAccessToken(user);
+            const refreshToken = authController.generateRefreshToken(user);
+
+            // Lưu refresh token vào DB
+            await TokenModel.create({
+                userId: user._id,
+                refreshToken,
+            });
+
+            // Gửi refresh token qua cookie
+            res.cookie("refreshToken", refreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === "production",
+                path: "/",
+                sameSite: "strict",
+            });
+
+            const { password, ...others } = user._doc;
+            res.status(201).json({ ...others, accessToken });
         } catch (err) {
-            res.status(500).json(err);
+            res.status(500).json({ message: "Server error", error: err.message });
         }
     },
 
@@ -53,26 +71,34 @@ const authController = {
             if (!user) {
                 return res.status(404).json({ message: "User not found!" });
             }
-    
+
             const validPassword = await bcrypt.compare(req.body.password, user.password);
             if (!validPassword) {
                 return res.status(401).json({ message: "Invalid password!" });
             }
-    
+
             const accessToken = authController.generateAccessToken(user);
             const refreshToken = authController.generateRefreshToken(user);
 
-            // Lưu refresh token vào mảng
-            refreshTokens.push(refreshToken); 
+            // Xoá token cũ nếu có
+            await TokenModel.findOneAndDelete({ userId: user._id });
+
+            // Lưu token mới vào DB
+            await TokenModel.create({
+                userId: user._id,
+                refreshToken,
+            });
 
             // Set cookie refresh token
             res.cookie("refreshToken", refreshToken, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === "production",
-                path: "/",
-                sameSite: "strict",
-            });
-           
+                // secure: true, // nếu dùng https
+                sameSite: "None", // quan trọng khi frontend-backend khác domain hoặc khác port
+                path: "/auth/refresh",
+                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
+              });
+              
+
             const { password, ...others } = user._doc;
             res.status(200).json({ ...others, accessToken });
         } catch (err) {
@@ -87,23 +113,29 @@ const authController = {
             if (!refreshToken) {
                 return res.status(401).json("You're not authenticated");
             }
-            if (!refreshTokens.includes(refreshToken)) {
+
+            // Kiểm tra token có tồn tại trong DB không
+            const existingToken = await TokenModel.findOne({ refreshToken });
+            if (!existingToken) {
                 return res.status(403).json("Refresh token is not valid");
             }
-            jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, (err, user) => {
+
+            jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, async (err, user) => {
                 if (err) {
-                    console.log(err);
                     return res.status(403).json("Invalid or expired refresh token");
                 }
-                // Xoá token cũ (nếu muốn vô hiệu hoá nó)
-                refreshTokens = refreshTokens.filter((token) => token !== refreshToken);
 
-                // Tạo token mới
+                // Xoá token cũ trong DB
+                await TokenModel.findOneAndDelete({ refreshToken });
+
                 const newAccessToken = authController.generateAccessToken(user);
                 const newRefreshToken = authController.generateRefreshToken(user);
 
-                // Thêm token mới
-                refreshTokens.push(newRefreshToken);
+                // Lưu token mới vào DB
+                await TokenModel.create({
+                    userId: user.id,
+                    refreshToken: newRefreshToken,
+                });
 
                 // Gửi lại cookie refresh token mới
                 res.cookie("refreshToken", newRefreshToken, {
@@ -112,6 +144,7 @@ const authController = {
                     path: "/",
                     sameSite: "strict",
                 });
+
                 return res.status(200).json({ accessToken: newAccessToken });
             });
         } catch (error) {
@@ -121,9 +154,16 @@ const authController = {
     },
 
     userLogout: async (req, res) => {
-        res.clearCookie("refreshToken");
-        refreshTokens = refreshTokens.filter((token) => token !== req.cookies.refreshToken);
-        res.status(200).json("You logged out successfully");
+        try {
+            const refreshToken = req.cookies.refreshToken;
+            if (refreshToken) {
+                await TokenModel.findOneAndDelete({ refreshToken });
+            }
+            res.clearCookie("refreshToken");
+            res.status(200).json("You logged out successfully");
+        } catch (err) {
+            res.status(500).json({ message: "Logout failed", error: err.message });
+        }
     },
 
     deleteUser: async (req, res) => {
@@ -132,7 +172,11 @@ const authController = {
             if (!user) {
                 return res.status(404).json({ message: "User not found" });
             }
+
+            // Xoá tất cả refresh token của user nếu có
+            await TokenModel.deleteMany({ userId: user._id });
             await user.remove();
+
             res.status(200).json({ message: "User deleted successfully" });
         } catch (err) {
             res.status(500).json(err);

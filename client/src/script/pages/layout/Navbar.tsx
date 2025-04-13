@@ -2,7 +2,7 @@ import "../../../css/Navbar.css";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import uteLogo from "../../../assets/ute-logo.png";
-import { FaWarehouse, FaUserCircle, FaChartBar } from "react-icons/fa";
+import { FaWarehouse, FaUserCircle, FaChartBar, FaRobot } from "react-icons/fa";
 import { FaLocationDot } from "react-icons/fa6";
 
 interface Props {
@@ -72,6 +72,15 @@ const Navbar = (props: Props) => {
                 <p>Người dùng</p>
               </li>
             )}
+            <li 
+              className={
+                location.pathname.startsWith("/chatbot") ? "active" : ""
+              }
+              onClick={() => navigate("/chatbot")}
+            >
+              <FaRobot size={ICON_SIZE} />
+              <p>Chatbot</p>
+            </li>
           </ul>
         </div>
       </nav>

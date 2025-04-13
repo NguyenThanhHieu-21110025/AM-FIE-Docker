@@ -4,6 +4,7 @@ import DropdownLogin from "./DropdownLogin";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FaHome, FaChartBar } from "react-icons/fa";
 import ThemeToggle from "../../../components/ThemeToggle";
+import NotificationDropdown from "../../../components/NotificationDropdown";
 
 function Header() {
   const location = useLocation();
@@ -16,7 +17,6 @@ function Header() {
     location.pathname === "/forgotPassword";
 
   return (
-    <>
     <header>
       <div className="header-section">
         <div className="nav-buttons">
@@ -30,26 +30,25 @@ function Header() {
           </button>
         </div>
         
-        {/* Right side with theme toggle and dropdown */}
         <div className="header-right">
           <ThemeToggle />
+          <NotificationDropdown />
           <DropdownLogin />
         </div>
       </div>
+      
       {showUTEFullLogo && (
         <div className="logo-section">
           <Link to="/">
             <img 
               className="ute-img" 
               src={uteFullName} 
-              alt="UTE Logo"
+              alt="UTE Full Name"
             />
           </Link>
         </div>
       )}
     </header>
-    <div className="header-spacer"></div>
-    </>
   );
 }
 

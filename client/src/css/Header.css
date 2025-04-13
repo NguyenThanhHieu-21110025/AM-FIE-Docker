@@ -1,12 +1,15 @@
 header {
+  grid-row: 1; /* Đặt header vào dòng đầu tiên của grid */
   background-color: white;
   width: 100%;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  position: sticky;
-  top: 0;
+  position: relative; /* Thay đổi từ sticky/fixed thành relative */
   z-index: 1000;
+  position: sticky;
 }
-
+.header-spacer {
+  display: none;
+}
 .header-section {
   background: linear-gradient(90deg, rgb(11, 8, 158) 0%, rgb(21, 18, 168) 100%);
   height: 48px;

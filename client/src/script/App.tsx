@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import Layout from "./pages/layout/Layout";
 import LoginPage from "./pages/auth-pages/LoginPage";
 import RegisterPage from "./pages/auth-pages/RegisterPage";
@@ -18,6 +19,7 @@ import CreateRoomPage from "./pages/room-pages/CreateRoomPage";
 import ForgotPassword from "./pages/auth-pages/ForgotPasswordPage";
 import CreateUserPage from "./pages/user-pages/CreateUserPage";
 import AssetStatisticsPage from "./pages/asset-dashboard-statistics/AssetStatisticsPage";
+import ChatbotPage from "./pages/chatbot/ChatbotPage";
 
 function App() {
   const queryClient = new QueryClient();
@@ -73,6 +75,10 @@ function App() {
                   path="/asset-statistics"
                   element={<ProtectedRoute Component={AssetStatisticsPage} />}
                 />
+                <Route
+                  path="/chatbot"
+                  element={<ProtectedRoute Component={ChatbotPage} />}
+                />
               </Routes>
             </Layout>
           </MainRefProvider>
@@ -86,10 +92,31 @@ interface ProtectedRouteProps {
 }
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ Component }) => {
   const authContext = React.useContext(AuthContext);
+  const [retryCount, setRetryCount] = useState(0);
+
   if (!authContext) {
     throw new Error("useContext must be used within an AuthProvider");
   }
-  return authContext.email ? <Component /> : <Navigate to="/login" />;
-};
 
+  const { email, loading, refreshAccessToken } = authContext;
+  
+  // Add a single retry when authentication fails
+  useEffect(() => {
+    if (!loading && !email && retryCount < 1) {
+      console.log("Authentication failed, trying refresh once more...");
+      refreshAccessToken().catch(console.error);
+      setRetryCount(prev => prev + 1);
+    }
+  }, [email, loading, refreshAccessToken, retryCount]);
+
+  if (loading) {
+    return <div>Loading authentication...</div>;
+  }
+
+  if (!email) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Component />;
+};
 export default App;

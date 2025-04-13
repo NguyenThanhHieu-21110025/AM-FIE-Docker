@@ -8,5 +8,6 @@ router.post("/login", authController.loginUser);
 router.post("/refresh", authController.requestRefreshToken);
 router.delete("/:id",middlewareController.verifyTokenAndAdminAuth, authController.deleteUser);
 router.post("/logout",middlewareController.verifyToken, authController.userLogout);
+router.post("/refresh", authController.requestRefreshToken);
 
 module.exports = router;

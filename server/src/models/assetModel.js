@@ -27,7 +27,7 @@ const assetsSchema = new mongoose.Schema({
         description: "số hiệu tài sản"},
     asset_name: {
         type: String,
-        required: true,
+        // required: true,
         description: "Tên tài sản"
     },
     specifications: {

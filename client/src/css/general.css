@@ -89,14 +89,21 @@
 }
 
 /* Set core body defaults */
-html {
-  scroll-behavior: smooth;
-  font-size: 16px;
-  text-size-adjust: 100%;
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
 }
 
 body {
+  display: grid;
+  grid-template-rows: 50px 1fr; /* Header 50px, content 1fr */
   min-height: 100vh;
+  margin: 0;
+}
+
+/* Điều chỉnh lại phần body hiện có */
+body {
   text-rendering: optimizeSpeed;
   line-height: var(--line-height-normal);
   font-family: var(--font-family-base);

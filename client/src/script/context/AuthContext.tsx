@@ -25,6 +25,7 @@ interface AuthContextType {
   _id: string | null;
   email: string | null;
   admin: boolean | null;
+  loading: boolean;
   login: (user: LoginUser) => Promise<boolean>;
   logout: () => void;
   register: (user: RegisterUser) => Promise<boolean>;
@@ -44,6 +45,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [email, setEmail] = useState<string | null>(null);
   const [admin, setAdmin] = useState<boolean | null>(null);
   const [_id, set_id] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const HANDLE_AUTH_URL = import.meta.env.VITE_API_URL + "/auth";
 
@@ -170,6 +172,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setEmail(null);
         setAdmin(null);
       }
+      finally {
+        setLoading(false);
+      }
     };
     initializeAuth();
   }, [accessToken, refreshAccessToken]);
@@ -181,6 +186,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         email,
         admin,
         _id: _id,
+        loading,
         login,
         logout,
         register,
