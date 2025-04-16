@@ -4,7 +4,7 @@ import DropdownLogin from "./DropdownLogin";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FaHome, FaChartBar } from "react-icons/fa";
 import ThemeToggle from "../../../components/ThemeToggle";
-import NotificationDropdown from "../../../components/NotificationDropdown";
+import NotificationDropdown from "./NotificationDropdown";
 
 function Header() {
   const location = useLocation();

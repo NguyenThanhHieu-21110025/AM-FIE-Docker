@@ -1,6 +1,6 @@
 .dashboard-page {
   width: 100%;
-  min-height: calc(100vh - 68px); /* Thay đổi từ 100vh thành 100% */
+  min-height: calc(100vh - 68px); 
   background-color: #f8fafc;
   color: #1f2937;
   font-family: "Segoe UI", sans-serif;

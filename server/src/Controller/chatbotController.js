@@ -348,7 +348,7 @@ class ChatbotController {
   async queryAssets(analysis) {
     let query = {};
     let sortOptions = {};
-    let limit = 5; // Mặc định lấy 5 kết quả
+    let limit = 99999; // Mặc định lấy 5 kết quả
 
     // Nếu có mã tài sản cụ thể
     if (analysis.specificIds.assetCode) {
@@ -488,15 +488,17 @@ class ChatbotController {
     try {
       const session = new this.ChatSession({
         title,
-        userId: userId ? 
-          (mongoose.Types.ObjectId.isValid(userId) ? mongoose.Types.ObjectId(userId) : userId) 
+        userId: userId
+          ? mongoose.Types.ObjectId.isValid(userId)
+            ? new mongoose.Types.ObjectId(userId)
+            : userId
           : null,
         messages: [],
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
-  
+
       await session.save();
       return session;
     } catch (error) {
@@ -508,29 +510,89 @@ class ChatbotController {
   // Lấy tất cả phiên chat của người dùng
   async getUserSessions(userId) {
     try {
-      return await this.ChatSession.find({
-        userId: mongoose.Types.ObjectId(userId),
-      }).sort({ updatedAt: -1 });
+      // Kiểm tra userId hợp lệ
+      if (!userId) {
+        throw new Error("ID người dùng không hợp lệ");
+      }
+  
+      // Prepare a query that can match both ObjectId and string representations
+      let query = {};
+      
+      if (mongoose.Types.ObjectId.isValid(userId)) {
+        // If valid ObjectId, query for both string and ObjectId representations
+        query = {
+          $or: [
+            { userId: userId.toString() },
+            { userId: new mongoose.Types.ObjectId(userId) }
+          ]
+        };
+      } else {
+        // If not a valid ObjectId, just use the string
+        query = { userId: userId };
+      }
+  
+      console.log("Fetching sessions with query:", JSON.stringify(query));
+      
+      // Use the flexible query
+      return await this.ChatSession.find(query).sort({ updatedAt: -1 });
     } catch (error) {
       console.error("Error getting user sessions:", error);
       throw new Error("Không thể lấy danh sách phiên chat");
     }
   }
-
   // Lấy chi tiết phiên chat
   async getSessionDetail(sessionId) {
     try {
-      if (!mongoose.Types.ObjectId.isValid(sessionId)) {
+      if (!sessionId || !mongoose.Types.ObjectId.isValid(sessionId)) {
         throw new Error("ID phiên chat không hợp lệ");
       }
 
-      return await this.ChatSession.findById(sessionId);
+      return await this.ChatSession.findById(
+        new mongoose.Types.ObjectId(sessionId)
+      );
     } catch (error) {
       console.error("Error getting session detail:", error);
       throw new Error("Không thể lấy thông tin phiên chat");
     }
   }
+  async updateSession(sessionId, sessionData) {
+    try {
+      if (!sessionId || !mongoose.Types.ObjectId.isValid(sessionId)) {
+        throw new Error("ID phiên chat không hợp lệ");
+      }
 
+      const sessionObjectId = new mongoose.Types.ObjectId(sessionId);
+
+      // Remove _id from sessionData if present to avoid modification error
+      if (sessionData._id) {
+        delete sessionData._id;
+      }
+
+      // Ensure we don't overwrite userId
+      delete sessionData.userId;
+
+      // Update the session with new data
+      const updatedSession = await this.ChatSession.findByIdAndUpdate(
+        sessionObjectId,
+        {
+          $set: {
+            ...sessionData,
+            updatedAt: new Date(),
+          },
+        },
+        { new: true }
+      );
+
+      if (!updatedSession) {
+        throw new Error("Không tìm thấy phiên chat để cập nhật");
+      }
+
+      return updatedSession;
+    } catch (error) {
+      console.error("Error updating session:", error);
+      throw new Error("Không thể cập nhật phiên chat");
+    }
+  }
   // Xóa phiên chat
   async deleteSession(sessionId) {
     try {
@@ -538,11 +600,28 @@ class ChatbotController {
         throw new Error("ID phiên chat không hợp lệ");
       }
 
-      await this.ChatSession.findByIdAndDelete(sessionId);
-      return { success: true };
+      // Đảm bảo sessionId là ObjectId hợp lệ
+      const objectId = new mongoose.Types.ObjectId(sessionId);
+
+      // Kiểm tra xem session có tồn tại không trước khi xóa
+      const session = await this.ChatSession.findById(objectId);
+      if (!session) {
+        throw new Error("Không tìm thấy phiên chat");
+      }
+
+      // Thực hiện xóa và đảm bảo nhận kết quả trả về
+      const result = await this.ChatSession.deleteOne({ _id: objectId });
+
+      // Kiểm tra kết quả xóa
+      if (result.deletedCount === 0) {
+        throw new Error("Không thể xóa phiên chat");
+      }
+
+      console.log(`Session deleted successfully: ${sessionId}`);
+      return { success: true, message: "Đã xóa phiên chat" };
     } catch (error) {
       console.error("Error deleting session:", error);
-      throw new Error("Không thể xóa phiên chat");
+      throw new Error(`Không thể xóa phiên chat: ${error.message}`);
     }
   }
 
@@ -597,7 +676,6 @@ class ChatbotController {
       // Phân tích câu hỏi và chuẩn bị ngữ cảnh
       const analysis = await this.analyzeQuestion(userMessage);
 
-      
       // Lấy dữ liệu liên quan từ Pinecone (RAG)
       const relevantSystemData = await this.getRelevantSystemData(userMessage);
 
