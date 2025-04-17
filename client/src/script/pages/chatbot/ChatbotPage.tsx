@@ -81,8 +81,26 @@ const ChatbotPage: React.FC = () => {
     }
   };
 
-  const handleSessionSelect = (sessionId: string) => {
-    setActiveSessionId(sessionId);
+  const handleSessionSelect = async (sessionId: string) => {
+    try {
+      setLoading(true);
+      setActiveSessionId(sessionId);
+      
+      // Fetch full session details including messages
+      const sessionDetail = await ChatbotService.fetchSessionDetail(sessionId, accessToken);
+      
+      // Update the selected session with full details
+      const updatedSessions = sessions.map(session => 
+        session.id === sessionId ? sessionDetail : session
+      );
+      
+      setSessions(updatedSessions);
+    } catch (error) {
+      console.error("Error loading session details:", error);
+      // Optionally show an error message to the user
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDeleteSession = async (sessionId: string) => {

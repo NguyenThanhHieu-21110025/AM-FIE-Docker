@@ -486,13 +486,16 @@ class ChatbotController {
   // Tạo phiên chat mới
   async createSession(userId, title = "Cuộc trò chuyện mới") {
     try {
+      // Validate userId before using
+      const validUserId =
+        userId && mongoose.Types.ObjectId.isValid(userId)
+          ? new mongoose.Types.ObjectId(userId)
+          : userId;
+
+      // Create new MongoDB session
       const session = new this.ChatSession({
         title,
-        userId: userId
-          ? mongoose.Types.ObjectId.isValid(userId)
-            ? new mongoose.Types.ObjectId(userId)
-            : userId
-          : null,
+        userId: validUserId,
         messages: [],
         isActive: true,
         createdAt: new Date(),
@@ -510,31 +513,28 @@ class ChatbotController {
   // Lấy tất cả phiên chat của người dùng
   async getUserSessions(userId) {
     try {
-      // Kiểm tra userId hợp lệ
       if (!userId) {
         throw new Error("ID người dùng không hợp lệ");
       }
-  
-      // Prepare a query that can match both ObjectId and string representations
+
       let query = {};
-      
+
       if (mongoose.Types.ObjectId.isValid(userId)) {
-        // If valid ObjectId, query for both string and ObjectId representations
+        // Query for both string and ObjectId representations
         query = {
           $or: [
             { userId: userId.toString() },
-            { userId: new mongoose.Types.ObjectId(userId) }
-          ]
+            { userId: new mongoose.Types.ObjectId(userId) },
+          ],
         };
       } else {
-        // If not a valid ObjectId, just use the string
         query = { userId: userId };
       }
-  
-      console.log("Fetching sessions with query:", JSON.stringify(query));
-      
-      // Use the flexible query
-      return await this.ChatSession.find(query).sort({ updatedAt: -1 });
+
+      return await this.ChatSession.find(query)
+        .sort({ updatedAt: -1 })
+        .select("-messages") // Don't load all messages for performance
+        .exec();
     } catch (error) {
       console.error("Error getting user sessions:", error);
       throw new Error("Không thể lấy danh sách phiên chat");
@@ -547,9 +547,15 @@ class ChatbotController {
         throw new Error("ID phiên chat không hợp lệ");
       }
 
-      return await this.ChatSession.findById(
+      const session = await this.ChatSession.findById(
         new mongoose.Types.ObjectId(sessionId)
       );
+      
+      if (!session) {
+        throw new Error("Không tìm thấy phiên chat");
+      }
+      
+      return session;
     } catch (error) {
       console.error("Error getting session detail:", error);
       throw new Error("Không thể lấy thông tin phiên chat");
@@ -600,24 +606,14 @@ class ChatbotController {
         throw new Error("ID phiên chat không hợp lệ");
       }
 
-      // Đảm bảo sessionId là ObjectId hợp lệ
-      const objectId = new mongoose.Types.ObjectId(sessionId);
+      const result = await this.ChatSession.deleteOne({ 
+        _id: new mongoose.Types.ObjectId(sessionId) 
+      });
 
-      // Kiểm tra xem session có tồn tại không trước khi xóa
-      const session = await this.ChatSession.findById(objectId);
-      if (!session) {
-        throw new Error("Không tìm thấy phiên chat");
-      }
-
-      // Thực hiện xóa và đảm bảo nhận kết quả trả về
-      const result = await this.ChatSession.deleteOne({ _id: objectId });
-
-      // Kiểm tra kết quả xóa
       if (result.deletedCount === 0) {
         throw new Error("Không thể xóa phiên chat");
       }
 
-      console.log(`Session deleted successfully: ${sessionId}`);
       return { success: true, message: "Đã xóa phiên chat" };
     } catch (error) {
       console.error("Error deleting session:", error);
@@ -630,60 +626,60 @@ class ChatbotController {
     try {
       let session;
 
-      // Xử lý sessionId
-      if (sessionId && sessionId.startsWith("local-")) {
-        // Nếu sessionId là local, tạo session mới
+      // Handle session initialization
+      if (!sessionId || !mongoose.Types.ObjectId.isValid(sessionId)) {
+        // Create new session if no valid sessionId
         session = await this.createSession(userId);
         sessionId = session._id;
-      } else if (sessionId && mongoose.Types.ObjectId.isValid(sessionId)) {
-        // Nếu sessionId hợp lệ, tìm session
-        session = await this.ChatSession.findById(sessionId);
-        if (!session) {
-          // Nếu không tìm thấy session, tạo mới
+      } else {
+        // Try to get existing session
+        try {
+          session = await this.ChatSession.findById(sessionId);
+          
+          if (!session) {
+            // If not found, create a new one
+            session = await this.createSession(userId);
+            sessionId = session._id;
+          }
+        } catch (error) {
+          // Handle error by creating a new session
+          console.error("Error retrieving session:", error);
           session = await this.createSession(userId);
           sessionId = session._id;
         }
-      } else {
-        // Trường hợp không có sessionId hoặc không hợp lệ
-        session = await this.createSession(userId);
-        sessionId = session._id;
       }
 
-      // Thêm tin nhắn người dùng vào phiên chat
+      // Add user message to session
       const userMessageObj = {
         role: "user",
         content: userMessage,
         timestamp: new Date(),
       };
 
-      // Khởi tạo messages nếu chưa có
+      // Initialize messages array if needed
       if (!session.messages) {
         session.messages = [];
       }
 
+      // Add user message to chat history
       session.messages.push(userMessageObj);
 
-      // Cập nhật tiêu đề session nếu là tin nhắn đầu tiên
+      // Update session title if this is the first message
       if (session.messages.length === 1) {
-        // Giới hạn tiêu đề tối đa 50 ký tự
-        const title =
-          userMessage.length > 50
-            ? userMessage.substring(0, 47) + "..."
-            : userMessage;
-        session.title = title;
+        session.title = userMessage.length > 50
+          ? userMessage.substring(0, 47) + "..."
+          : userMessage;
       }
 
-      // Phân tích câu hỏi và chuẩn bị ngữ cảnh
+      // Process the user's query
       const analysis = await this.analyzeQuestion(userMessage);
-
-      // Lấy dữ liệu liên quan từ Pinecone (RAG)
       const relevantSystemData = await this.getRelevantSystemData(userMessage);
 
-      // Thu thập dữ liệu từ DB dựa trên phân tích
+      // Build context data
       let contextData = {};
       let additionalContext = "";
 
-      // Xử lý dữ liệu tài sản
+      // Process asset data if needed
       if (analysis.topics.asset) {
         const assetData = await this.queryAssets(analysis);
         contextData.assets = assetData;
@@ -691,16 +687,18 @@ class ChatbotController {
         const assetCount = await this.Asset.countDocuments();
         additionalContext += `\nThống kê: Hệ thống có ${assetCount} tài sản. `;
 
+        // Add statistics about all assets for better value-related queries
+        if (analysis.topics.value || analysis.specialQueries.highestValue) {
+          const highestValueAsset = await this.Asset.findOne().sort({remaining_value: -1});
+          additionalContext += `\nTài sản có giá trị cao nhất: ${highestValueAsset?.asset_name || 'Không xác định'} (${highestValueAsset?.remaining_value || 0}).`;
+        }
+
         if (assetData.length > 0) {
-          additionalContext += `\nDữ liệu tài sản liên quan: ${JSON.stringify(
-            assetData,
-            null,
-            2
-          )}\n`;
+          additionalContext += `\nDữ liệu tài sản liên quan: ${JSON.stringify(assetData, null, 2)}\n`;
         }
       }
 
-      // Xử lý dữ liệu phòng
+      // Process room data if needed
       if (analysis.topics.room) {
         const roomData = await this.queryRooms(analysis);
         contextData.rooms = roomData;
@@ -709,15 +707,11 @@ class ChatbotController {
         additionalContext += `\nThống kê: Hệ thống có ${roomCount} phòng. `;
 
         if (roomData.length > 0) {
-          additionalContext += `\nDữ liệu phòng liên quan: ${JSON.stringify(
-            roomData,
-            null,
-            2
-          )}\n`;
+          additionalContext += `\nDữ liệu phòng liên quan: ${JSON.stringify(roomData, null, 2)}\n`;
         }
       }
 
-      // Xử lý dữ liệu người dùng
+      // Process user data if needed
       if (analysis.topics.user) {
         const users = await this.User.find().limit(3);
         contextData.users = users.map((user) => ({
@@ -726,33 +720,23 @@ class ChatbotController {
           isActive: user.isActive,
         }));
 
-        additionalContext += `\nDữ liệu người dùng: ${JSON.stringify(
-          contextData.users,
-          null,
-          2
-        )}\n`;
+        additionalContext += `\nDữ liệu người dùng: ${JSON.stringify(contextData.users, null, 2)}\n`;
       }
 
-      // Lấy tin nhắn gần đây từ phiên chat hiện tại
+      // Get conversation history context
       const sessionHistory = this.getSessionContext(session);
 
-      // Chuẩn bị ngữ cảnh từ dữ liệu vector liên quan
+      // Prepare vector context
       const vectorContext = relevantSystemData
         .map((item, index) => {
           if (!item || !item.type) {
-            return `[Tài liệu liên quan ${
-              index + 1
-            }]: Không có thông tin cụ thể`;
+            return `[Tài liệu liên quan ${index + 1}]: Không có thông tin cụ thể`;
           }
-          return `[Tài liệu liên quan ${
-            index + 1
-          }] ${item.type.toUpperCase()}:\n${
-            item.content || "Không có nội dung"
-          }\n`;
+          return `[Tài liệu liên quan ${index + 1}] ${item.type.toUpperCase()}:\n${item.content || "Không có nội dung"}\n`;
         })
         .join("\n");
 
-      // Tạo prompt với ngữ cảnh phong phú
+      // Build prompt with rich context
       const contextualPrompt = `
 Dữ liệu từ hệ thống quản lý tài sản HCMUTE:
 ${additionalContext}
@@ -767,12 +751,10 @@ Câu hỏi hiện tại của người dùng: ${userMessage}
 
 Hãy trả lời dựa trên dữ liệu được cung cấp ở trên. Nếu không đủ thông tin, hãy cho biết cần thêm thông tin gì.`;
 
-      // Lấy phản hồi từ Gemini API
-      const botResponse = await this.geminiService.getResponse(
-        contextualPrompt
-      );
+      // Get response from Gemini
+      const botResponse = await this.geminiService.getResponse(contextualPrompt);
 
-      // Thêm tin nhắn của bot vào phiên chat
+      // Add bot response to session
       const botMessageObj = {
         role: "assistant",
         content: botResponse,
@@ -788,15 +770,10 @@ Hãy trả lời dựa trên dữ liệu được cung cấp ở trên. Nếu kh
       };
 
       session.messages.push(botMessageObj);
-
-      // Cập nhật thời gian phiên trò chuyện
       session.updatedAt = new Date();
 
-      // Lưu phiên trò chuyện đã cập nhật
+      // Save updated session
       await session.save();
-
-      // KHÔNG lưu chat vào Pinecone nữa
-      // (Dòng này đã bị xóa: await this.pineconeService.storeVector(userMessage, botResponse);)
 
       return {
         response: botResponse,
@@ -815,14 +792,11 @@ Hãy trả lời dựa trên dữ liệu được cung cấp ở trên. Nếu kh
         return "";
       }
 
-      // Lấy tối đa 10 tin nhắn gần nhất
+      // Get up to 10 most recent messages
       const recentMessages = session.messages.slice(-10);
 
       return recentMessages
-        .map(
-          (msg) =>
-            `${msg.role === "user" ? "Người dùng" : "Trợ lý"}: ${msg.content}`
-        )
+        .map((msg) => `${msg.role === "user" ? "Người dùng" : "Trợ lý"}: ${msg.content}`)
         .join("\n\n");
     } catch (error) {
       console.error("Error getting session context:", error);

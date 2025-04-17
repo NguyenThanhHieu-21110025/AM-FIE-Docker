@@ -7,10 +7,7 @@ const pineconeService = require('../services/pineconeService');
  * @param {string} message - The message to convert to a vector
  * @returns {number[]} The vector representation of the message
  */
-function messageToVector(message) {
-    // In a production environment, you would use a proper embedding model here
-    // such as OpenAI's text-embedding-3-small or similar
-    
+function messageToVector(message) {   
     // Update dimension to match Pinecone index (768 dimensions)
     const dimensions = 768; // Changed from 1536 to match pineconeService
     const vector = Array(dimensions).fill(0).map(() => Math.random() * 2 - 1);
