@@ -3,7 +3,7 @@ const Asset = require("../models/assetModel");
 const Room = require("../models/roomModel");
 const User = require("../models/userModel");
 const geminiService = require("../services/geminiService");
-const pineconeService = require("../services/pineconeService");
+const mongoVectorService = require("../services/mongoVectorService");
 const vectorUtils = require("../utils/vectorUtils");
 const mongoose = require("mongoose");
 
@@ -14,7 +14,7 @@ class ChatbotController {
     this.Room = Room;
     this.User = User;
     this.geminiService = geminiService;
-    this.pineconeService = pineconeService;
+    this.vectorService = mongoVectorService;
 
     // Khởi tạo vector cho dữ liệu hệ thống khi controller được tạo
     this.ensureSystemDataIndexed();
@@ -23,23 +23,23 @@ class ChatbotController {
   // Khởi tạo và đảm bảo dữ liệu hệ thống được đánh chỉ mục trong Pinecone
   async ensureSystemDataIndexed() {
     try {
-      const indexStatus = await this.pineconeService.checkIndexStatus();
-
+      const indexStatus = await this.vectorService.checkIndexStatus();
+  
       // Nếu chỉ mục chưa được tạo, hoặc cần tái tạo, thực hiện đánh chỉ mục
       if (!indexStatus.isIndexed) {
-        console.log("Indexing system data in Pinecone...");
-
+        console.log("Indexing system data in MongoDB Atlas...");
+  
         // Đánh chỉ mục tất cả dữ liệu tài sản
         await this.indexAllAssets();
-
+  
         // Đánh chỉ mục tất cả dữ liệu phòng
         await this.indexAllRooms();
-
+  
         // Đánh chỉ mục tất cả dữ liệu người dùng
         await this.indexAllUsers();
-
+  
         // Cập nhật trạng thái đánh chỉ mục
-        await this.pineconeService.updateIndexStatus(true);
+        await this.vectorService.updateIndexStatus(true);
         console.log("System data indexing completed.");
       }
     } catch (error) {
@@ -68,41 +68,45 @@ class ChatbotController {
   // Đánh chỉ mục cho một tài sản
   async indexAsset(asset) {
     try {
-      // Tạo content string cho asset
+      // Create content string for asset
       const assetContent = `
-                Mã tài sản: ${asset.asset_code}
-                Tên tài sản: ${asset.asset_name}
-                Đặc điểm: ${asset.specifications || "N/A"}
-                Năm sử dụng: ${asset.year_of_use || "N/A"}
-                Số lượng: ${asset.accounting?.quantity || "N/A"}
-                Đơn giá: ${asset.accounting?.unit_price || "N/A"}
-                Nguyên giá: ${asset.accounting?.origin_price || "N/A"}
-                Tỷ lệ hao mòn: ${asset.depreciation_rate || "N/A"}%
-                Giá trị còn lại: ${asset.remaining_value || "N/A"}
-                Vị trí: ${
-                  asset.location
-                    ? `${asset.location.building} - ${asset.location.name}`
-                    : "Không xác định"
-                }
-                Người phụ trách: ${
-                  asset.responsible_user
-                    ? asset.responsible_user.name
-                    : "Không xác định"
-                }
-            `;
+        Mã tài sản: ${asset.asset_code}
+        Tên tài sản: ${asset.asset_name}
+        Đặc điểm: ${asset.specifications || "N/A"}
+        Năm sử dụng: ${asset.year_of_use || "N/A"}
+        Số lượng: ${asset.accounting?.quantity || "N/A"}
+        Đơn giá: ${asset.accounting?.unit_price || "N/A"}
+        Nguyên giá: ${asset.accounting?.origin_price || "N/A"}
+        Tỷ lệ hao mòn: ${asset.depreciation_rate || "N/A"}%
+        Giá trị còn lại: ${asset.remaining_value || "N/A"}
+        Vị trí: ${
+          asset.location
+            ? `${asset.location.building} - ${asset.location.name}`
+            : "Không xác định"
+        }
+        Người phụ trách: ${
+          asset.responsible_user
+            ? asset.responsible_user.name
+            : "Không xác định"
+        }
+      `;
 
-      // Tạo và lưu vector
-      const vector = this.pineconeService.generateEmbedding(assetContent);
-      await this.pineconeService.upsertVector(`asset-${asset._id}`, vector, {
-        type: "asset",
-        asset_id: asset._id.toString(),
-        asset_code: asset.asset_code,
-        asset_name: asset.asset_name,
-        location: asset.location
-          ? `${asset.location.building}-${asset.location.name}`
-          : "Unknown",
-        content: assetContent,
-      });
+      // Generate and store vector in MongoDB
+      const vector = this.vectorService.generateEmbedding(assetContent);
+      await this.vectorService.upsertVector(
+        `asset-${asset._id}`,
+        "asset",
+        vector,
+        assetContent,
+        {
+          asset_id: asset._id.toString(),
+          asset_code: asset.asset_code,
+          asset_name: asset.asset_name,
+          location: asset.location
+            ? `${asset.location.building}-${asset.location.name}`
+            : "Unknown",
+        }
+      );
     } catch (error) {
       console.error(`Error indexing asset ${asset._id}:`, error);
     }
@@ -149,14 +153,20 @@ class ChatbotController {
             `;
 
       // Tạo và lưu vector
-      const vector = this.pineconeService.generateEmbedding(roomContent);
-      await this.pineconeService.upsertVector(`room-${room._id}`, vector, {
-        type: "room",
-        room_id: room._id.toString(),
-        room_name: room.name,
-        building: room.building,
-        content: roomContent,
-      });
+      const vector = this.vectorService.generateEmbedding(roomContent);
+      await this.vectorService.upsertVector(
+        `room-${room._id}`,
+        "room",
+        vector,
+        roomContent,
+        {
+          type: "room",
+          room_id: room._id.toString(),
+          room_name: room.name,
+          building: room.building,
+          content: roomContent,
+        }
+      );
     } catch (error) {
       console.error(`Error indexing room ${room._id}:`, error);
     }
@@ -194,14 +204,20 @@ class ChatbotController {
             `;
 
       // Tạo và lưu vector
-      const vector = this.pineconeService.generateEmbedding(userContent);
-      await this.pineconeService.upsertVector(`user-${user._id}`, vector, {
-        type: "user",
-        user_id: user._id.toString(),
-        user_name: user.name,
-        position: user.position || "N/A",
-        content: userContent,
-      });
+      const vector = this.vectorService.generateEmbedding(userContent);
+      await this.vectorService.upsertVector(
+        `user-${user._id}`,
+        "user",
+        vector,
+        userContent,
+        {
+          type: "user",
+          user_id: user._id.toString(),
+          user_name: user.name,
+          position: user.position || "N/A",
+          content: userContent,
+        }
+      );
     } catch (error) {
       console.error(`Error indexing user ${user._id}:`, error);
     }
@@ -210,14 +226,14 @@ class ChatbotController {
   // Lấy dữ liệu liên quan từ Pinecone dựa trên câu hỏi
   async getRelevantSystemData(question) {
     try {
-      const vector = this.pineconeService.generateEmbedding(question);
-      const results = await this.pineconeService.queryVector(vector, 5);
+      const vector = this.vectorService.generateEmbedding(question);
+      const results = await this.vectorService.queryVector(vector, 5);
 
       return results
-        .filter((item) => item && item.metadata)
+        .filter((item) => item)
         .map((item) => ({
-          type: item.metadata.type || "unknown",
-          content: item.metadata.content || "Không có nội dung cụ thể",
+          type: item.objectType || "unknown",
+          content: item.content || "Không có nội dung cụ thể",
           score: item.score,
         }));
     } catch (error) {
@@ -550,11 +566,11 @@ class ChatbotController {
       const session = await this.ChatSession.findById(
         new mongoose.Types.ObjectId(sessionId)
       );
-      
+
       if (!session) {
         throw new Error("Không tìm thấy phiên chat");
       }
-      
+
       return session;
     } catch (error) {
       console.error("Error getting session detail:", error);
@@ -606,8 +622,8 @@ class ChatbotController {
         throw new Error("ID phiên chat không hợp lệ");
       }
 
-      const result = await this.ChatSession.deleteOne({ 
-        _id: new mongoose.Types.ObjectId(sessionId) 
+      const result = await this.ChatSession.deleteOne({
+        _id: new mongoose.Types.ObjectId(sessionId),
       });
 
       if (result.deletedCount === 0) {
@@ -635,7 +651,7 @@ class ChatbotController {
         // Try to get existing session
         try {
           session = await this.ChatSession.findById(sessionId);
-          
+
           if (!session) {
             // If not found, create a new one
             session = await this.createSession(userId);
@@ -666,9 +682,10 @@ class ChatbotController {
 
       // Update session title if this is the first message
       if (session.messages.length === 1) {
-        session.title = userMessage.length > 50
-          ? userMessage.substring(0, 47) + "..."
-          : userMessage;
+        session.title =
+          userMessage.length > 50
+            ? userMessage.substring(0, 47) + "..."
+            : userMessage;
       }
 
       // Process the user's query
@@ -689,12 +706,20 @@ class ChatbotController {
 
         // Add statistics about all assets for better value-related queries
         if (analysis.topics.value || analysis.specialQueries.highestValue) {
-          const highestValueAsset = await this.Asset.findOne().sort({remaining_value: -1});
-          additionalContext += `\nTài sản có giá trị cao nhất: ${highestValueAsset?.asset_name || 'Không xác định'} (${highestValueAsset?.remaining_value || 0}).`;
+          const highestValueAsset = await this.Asset.findOne().sort({
+            remaining_value: -1,
+          });
+          additionalContext += `\nTài sản có giá trị cao nhất: ${
+            highestValueAsset?.asset_name || "Không xác định"
+          } (${highestValueAsset?.remaining_value || 0}).`;
         }
 
         if (assetData.length > 0) {
-          additionalContext += `\nDữ liệu tài sản liên quan: ${JSON.stringify(assetData, null, 2)}\n`;
+          additionalContext += `\nDữ liệu tài sản liên quan: ${JSON.stringify(
+            assetData,
+            null,
+            2
+          )}\n`;
         }
       }
 
@@ -707,7 +732,11 @@ class ChatbotController {
         additionalContext += `\nThống kê: Hệ thống có ${roomCount} phòng. `;
 
         if (roomData.length > 0) {
-          additionalContext += `\nDữ liệu phòng liên quan: ${JSON.stringify(roomData, null, 2)}\n`;
+          additionalContext += `\nDữ liệu phòng liên quan: ${JSON.stringify(
+            roomData,
+            null,
+            2
+          )}\n`;
         }
       }
 
@@ -720,7 +749,11 @@ class ChatbotController {
           isActive: user.isActive,
         }));
 
-        additionalContext += `\nDữ liệu người dùng: ${JSON.stringify(contextData.users, null, 2)}\n`;
+        additionalContext += `\nDữ liệu người dùng: ${JSON.stringify(
+          contextData.users,
+          null,
+          2
+        )}\n`;
       }
 
       // Get conversation history context
@@ -730,9 +763,15 @@ class ChatbotController {
       const vectorContext = relevantSystemData
         .map((item, index) => {
           if (!item || !item.type) {
-            return `[Tài liệu liên quan ${index + 1}]: Không có thông tin cụ thể`;
+            return `[Tài liệu liên quan ${
+              index + 1
+            }]: Không có thông tin cụ thể`;
           }
-          return `[Tài liệu liên quan ${index + 1}] ${item.type.toUpperCase()}:\n${item.content || "Không có nội dung"}\n`;
+          return `[Tài liệu liên quan ${
+            index + 1
+          }] ${item.type.toUpperCase()}:\n${
+            item.content || "Không có nội dung"
+          }\n`;
         })
         .join("\n");
 
@@ -752,7 +791,9 @@ Câu hỏi hiện tại của người dùng: ${userMessage}
 Hãy trả lời dựa trên dữ liệu được cung cấp ở trên. Nếu không đủ thông tin, hãy cho biết cần thêm thông tin gì.`;
 
       // Get response from Gemini
-      const botResponse = await this.geminiService.getResponse(contextualPrompt);
+      const botResponse = await this.geminiService.getResponse(
+        contextualPrompt
+      );
 
       // Add bot response to session
       const botMessageObj = {
@@ -796,7 +837,10 @@ Hãy trả lời dựa trên dữ liệu được cung cấp ở trên. Nếu kh
       const recentMessages = session.messages.slice(-10);
 
       return recentMessages
-        .map((msg) => `${msg.role === "user" ? "Người dùng" : "Trợ lý"}: ${msg.content}`)
+        .map(
+          (msg) =>
+            `${msg.role === "user" ? "Người dùng" : "Trợ lý"}: ${msg.content}`
+        )
         .join("\n\n");
     } catch (error) {
       console.error("Error getting session context:", error);
