@@ -1,5 +1,6 @@
 const Assets = require("../models/assetModel");
 const Room = require("../models/roomModel");
+const { createNotification } = require("./notificationController");
 
 // Hàm cập nhật thông tin tổng hợp của phòng
 async function updateRoomSummary(roomId) {
@@ -128,6 +129,23 @@ const assetController = {
         await updateRoomSummary(req.body.location);
       }
 
+      if (req.body.location) {
+        const room = await Room.findById(req.body.location).select('fullName');
+        await createNotification({
+          message: `Tài sản mới "${req.body.asset_name}" đã được thêm vào ${room?.fullName || 'hệ thống'}`,
+          type: 'asset',
+          relatedItem: asset._id,
+          itemModel: 'Asset'
+        });
+      } else {
+        await createNotification({
+          message: `Tài sản mới "${req.body.asset_name}" đã được thêm vào hệ thống`,
+          type: 'asset',
+          relatedItem: asset._id,
+          itemModel: 'Asset'
+        });
+      }
+
       res.status(201).json(asset);
     } catch (err) {
       // Trả về thông báo lỗi chi tiết hơn
@@ -205,6 +223,13 @@ const assetController = {
         await updateRoomSummary(oldLocation);
       }
 
+      await createNotification({
+        message: `Tài sản "${updatedAsset.asset_name}" đã được cập nhật`,
+        type: 'asset',
+        relatedItem: updatedAsset._id,
+        itemModel: 'Asset'
+      });
+
       res.status(200).json(updatedAsset);
     } catch (err) {
       res.status(400).json({
@@ -238,7 +263,12 @@ const assetController = {
         // Cập nhật số liệu tổng hợp của phòng
         await updateRoomSummary(locationId);
       }
-
+      
+      await createNotification({
+        message: `Tài sản "${asset.asset_name}" đã bị xóa khỏi hệ thống`,
+        type: 'asset'
+      });
+      
       res.status(200).json("Asset has been deleted");
     } catch (err) {
       res.status(500).json(err);

@@ -1,6 +1,7 @@
 const User = require("../models/userModel");
 const bcrypt = require("bcrypt");
 const emailService = require("../sendEmail");
+const createNotification = require("./notificationController");
 
 const userController = {
     getAllUsers: async ( req, res ) => {
@@ -24,6 +25,13 @@ const userController = {
         try {
             const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
             const { password,...others } = user._doc;
+            await createNotification({
+                message: `Tài khoản "${user.name}" đã được cập nhật`,
+                type: 'user',
+                relatedItem: user._id,
+                itemModel: 'User'
+              });
+              
             res.status(200).json(others);
         }catch(err){
             res.status(500).json(err);
@@ -64,6 +72,22 @@ const userController = {
             const savedUser = await newUser.save();
             const { password, ...userData } = savedUser._doc;
             
+            // // Send email notification to the new user
+            // const emailSent = await emailService.sendWelcomeEmail(req.body.email, req.body.name);
+            // if (!emailSent) {
+            //     return res.status(500).json({
+            //         message: "Không thể gửi email chào mừng. Vui lòng thử lại sau",
+            //         status: "error"
+            //     });
+            // }
+
+            await createNotification({
+                message: `Tài khoản mới "${userData.name}" đã được tạo`,
+                type: 'user',
+                relatedItem: userData._id,
+                itemModel: 'User'
+              });
+
             res.status(201).json({
                 message: "Tạo tài khoản thành công",
                 status: "success",
@@ -90,6 +114,12 @@ const userController = {
     deleteUser: async ( req, res ) => {
         try {
             const user = await User.findByIdAndDelete(req.params.id);
+
+            await createNotification({
+                message: `Tài khoản "${user.name}" đã bị xóa khỏi hệ thống`,
+                type: 'user'
+              });
+
             res.status(200).json("User has been deleted");
         }catch (err) {
             res.status(500).json(err);

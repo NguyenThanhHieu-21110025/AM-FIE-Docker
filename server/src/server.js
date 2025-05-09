@@ -12,6 +12,8 @@ const authRoutes = require("./routes/authRoute");
 const importRouter = require("./routes/importDB.Route");
 const exportRouter = require("./routes/exportDB.Route");
 const chatRouter = require("./routes/chatRoute");
+const notificationRouter = require("./routes/notificationRoute");
+
 const { initPinecone } = require('./services/pineconeService');
 
 app.use(express.json());
@@ -46,6 +48,7 @@ app.use("/api/import", importRouter);
 app.use("/api/export", exportRouter);
 app.use("/api/auth", authRoutes);
 app.use("/api/chat", chatRouter);
+app.use("/api/notifications", notificationRouter);
 
 const port = process.env.PORT || 8080;
 app.listen(port, () => {

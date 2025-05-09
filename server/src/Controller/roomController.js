@@ -1,5 +1,5 @@
 const Room = require("../models/roomModel");
-
+const createNotification = require("./notificationController");
 const roomController = {
   createRoom: async (req, res) => {
     try {
@@ -13,6 +13,14 @@ const roomController = {
       });
       
       await room.save();
+
+      await createNotification({
+        message: `Phòng mới "${room.fullName}" đã được tạo`,
+        type: 'room',
+        relatedItem: room._id,
+        itemModel: 'Room'
+      });
+
       res.status(201).json(room);
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -63,6 +71,13 @@ const roomController = {
       
       // Lấy phòng đã cập nhật để trả về
       const updatedRoom = await Room.findById(req.params.id);
+
+      await createNotification({
+        message: `Phòng "${updatedRoom.fullName}" đã được cập nhật`,
+        type: 'room',
+        relatedItem: updatedRoom._id,
+        itemModel: 'Room'
+      });
       res.status(200).json(updatedRoom);
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -84,6 +99,12 @@ const roomController = {
       }
       
       await Room.findByIdAndDelete(req.params.id);
+
+      await createNotification({
+        message: `Phòng "${room.fullName}" đã bị xóa khỏi hệ thống`,
+        type: 'room'
+      });
+      
       res.status(200).json({ message: 'Room deleted successfully' });
     } catch (error) {
       res.status(400).json({ error: error.message });
