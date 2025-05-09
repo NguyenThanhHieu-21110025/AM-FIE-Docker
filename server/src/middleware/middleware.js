@@ -33,7 +33,7 @@ const middlewareController = {
 
     verifyTokenAndAdminAuth: (req, res, next) => {
         middlewareController.verifyToken(req, res, () => {
-            if (req.user && req.user.admin) {
+            if (req.user && req.user.isAdmin) {
                 next();
             } else {
                 res.status(403).json({

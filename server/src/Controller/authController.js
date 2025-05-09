@@ -46,7 +46,7 @@ const authController = {
             {
                 id: user._id,
                 email: user.email,
-                admin: user.admin,
+                isAdmin: user.isAdmin,
             },
             process.env.JWT_SECRET,
             { expiresIn: "2h" }
@@ -58,7 +58,7 @@ const authController = {
             {
                 id: user._id,
                 email: user.email,
-                admin: user.admin,
+                isAdmin: user.isAdmin,
             },
             process.env.JWT_REFRESH_SECRET,
             { expiresIn: "365d" }

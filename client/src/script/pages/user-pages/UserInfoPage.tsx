@@ -17,7 +17,7 @@ import { FaAngleLeft, FaCircle } from "react-icons/fa";
 const UserInfoPage = () => {
   const [formData, setFormData] = useState<User>({} as User);
   const [mode, setMode] = useState<"info" | "update">("info");
-  const { refreshAccessToken, accessToken, _id: accountId, admin } = useAuth();
+  const { refreshAccessToken, accessToken, _id: accountId, isAdmin } = useAuth();
   const location = useLocation();
   const id = location.pathname.split("/").pop() as string;
   const isMyAccount = id === accountId;
@@ -87,7 +87,7 @@ const UserInfoPage = () => {
     const result = await deleteUser(
       id,
       accountId as string,
-      admin as boolean,
+      isAdmin as boolean,
       token
     );
     if (result) {
@@ -112,7 +112,7 @@ const UserInfoPage = () => {
     const result = await changeStatusUser(
       id,
       accountId as string,
-      admin as boolean,
+      isAdmin as boolean,
       token
     );
     if (result) window.location.reload();
@@ -151,14 +151,14 @@ const UserInfoPage = () => {
               />{" "}
               {formData.status}
             </p>
-            {admin && !isMyAccount && (
+            {isAdmin && !isMyAccount && (
               <button className="status-btn" onClick={handleStatus}>
                 Chuyển trạng thái
               </button>
             )}
           </div>
         </div>
-        {(isMyAccount || admin) && (
+        {(isMyAccount || isAdmin) && (
           <div className="button-container">
             <button className="update-btn" onClick={() => setMode("update")}>
               Cập nhật thông tin

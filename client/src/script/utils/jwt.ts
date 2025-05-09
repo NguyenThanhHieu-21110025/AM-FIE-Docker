@@ -3,7 +3,7 @@ import { jwtDecode } from "jwt-decode";
 export interface TokenPayload {
   id: string;
   email: string;
-  admin: boolean;
+  isAdmin: boolean;
   iat: number;
   exp: number;
 }

@@ -14,7 +14,7 @@ const CreateUserPage = () => {
     password: "",
     phoneNumber: "",
     position: "",
-    admin: false,
+    isAdmin: false,
   });
   const [loading, setLoading] = useState(false);
   const { refreshAccessToken, accessToken } = useAuth();
@@ -138,7 +138,7 @@ const CreateUserPage = () => {
                 <input
                   type="checkbox"
                   name="admin"
-                  checked={formData.admin}
+                  checked={formData.isAdmin}
                   onChange={handleChange}
                 />
               </div>

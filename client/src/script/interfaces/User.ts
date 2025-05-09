@@ -8,7 +8,7 @@ export interface User {
   email: string;
   phoneNumber: string;
   position: string;
-  admin: boolean;
+  isAdmin: boolean;
   isActive: boolean;
   createAt: string;
   updateAt: string;
@@ -23,7 +23,7 @@ export interface CreateUserPayload {
   password: string;
   phoneNumber?: string;
   position?: string;
-  admin?: boolean;
+  isAdmin?: boolean;
 }
 
 export interface ApiResponse<T> {
@@ -43,7 +43,7 @@ export async function getUserList(accessToken: string) {
   console.log(data);
   data.forEach((item) => {
     item.status = item.isActive ? "Đang hoạt động" : "Dừng hoạt động";
-    item.role = item.admin ? "Admin" : "Người dùng";
+    item.role = item.isAdmin ? "Admin" : "Người dùng";
   });
 
   return data;
@@ -55,7 +55,7 @@ export async function getUserById(id: string, accessToken: string) {
   });
   const data = (await res.json()) as User;
   data.status = data.isActive ? "Đang hoạt động" : "Dừng hoạt động";
-  data.role = data.admin ? "Admin" : "Người dùng";
+  data.role = data.isAdmin ? "Admin" : "Người dùng";
   console.log(data);
   return data;
 }
@@ -107,7 +107,7 @@ export async function updateUser(id: string, user: User, accessToken: string) {
 export async function deleteUser(
   id: string,
   accoundId: string,
-  admin: boolean,
+  isAdmin: boolean,
   accessToken: string
 ) {
   try {
@@ -117,7 +117,7 @@ export async function deleteUser(
         "Content-Type": "application/json",
         token: `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ id: accoundId, admin: admin }),
+      body: JSON.stringify({ id: accoundId, admin: isAdmin }),
     };
     const res = await fetch(`${HANDLE_USER_URL}/${id}`, requestInit);
     const data = await res.json();
@@ -132,7 +132,7 @@ export async function deleteUser(
 export async function changeStatusUser(
   id: string,
   accoundId: string,
-  admin: boolean,
+  isAdmin: boolean,
   accessToken: string
 ) {
   try {
@@ -142,7 +142,7 @@ export async function changeStatusUser(
         "Content-Type": "application/json",
         token: `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ id: accoundId, admin: admin }),
+      body: JSON.stringify({ id: accoundId, isAdmin: isAdmin }),
     };
     const res = await fetch(`${HANDLE_USER_URL}/active/${id}`, requestInit);
     const data = await res.json();

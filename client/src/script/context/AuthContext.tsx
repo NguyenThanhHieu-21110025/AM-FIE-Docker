@@ -24,7 +24,7 @@ interface AuthContextType {
   accessToken: string | null;
   _id: string | null;
   email: string | null;
-  admin: boolean | null;
+  isAdmin: boolean | null;
   loading: boolean;
   login: (user: LoginUser) => Promise<boolean>;
   logout: () => void;
@@ -43,7 +43,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
-  const [admin, setAdmin] = useState<boolean | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [_id, set_id] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -59,11 +59,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.ok) {
         const {
           email: emailToken,
-          admin: adminToken,
+          isAdmin: adminToken,
           id,
         } = getPayload(data.accessToken);
         setEmail(emailToken);
-        setAdmin(adminToken);
+        setIsAdmin(adminToken);
         set_id(id);
 
         return data.accessToken;
@@ -88,7 +88,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.ok) {
         setAccessToken(data.accessToken);
         setEmail(data.email);
-        setAdmin(data.admin);
+        setIsAdmin(data.isAdmin);
         set_id(data.userid);
         return true;
       }
@@ -116,7 +116,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.ok) {
         setAccessToken(data.accessToken);
         setEmail(data.email);
-        setAdmin(data.admin);
+        setIsAdmin(data.isAdmin);
         set_id(data.userid);
         return true;
       }
@@ -143,34 +143,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             try {
               const {
                 email: emailToken,
-                admin: adminToken,
+                isAdmin: adminToken,
                 id,
               } = getPayload(token);
               set_id(id);
               setEmail(emailToken);
-              setAdmin(adminToken);
+              setIsAdmin(adminToken);
               return;
             } catch (decodeError) {
               console.error("Failed to decode token:", decodeError);
               set_id(null);
               setEmail(null);
-              setAdmin(null);
+              setIsAdmin(null);
             }
           }
           set_id(null);
           setEmail(null);
-          setAdmin(null);
+          setIsAdmin(null);
           return;
         }
         set_id(null);
         setEmail(null);
-        setAdmin(null);
+        setIsAdmin(null);
         return;
       } catch (error) {
         console.error("Failed to initialize authentication:", error);
         set_id(null);
         setEmail(null);
-        setAdmin(null);
+        setIsAdmin(null);
       }
       finally {
         setLoading(false);
@@ -184,7 +184,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       value={{
         accessToken,
         email,
-        admin,
+        isAdmin,
         _id: _id,
         loading,
         login,

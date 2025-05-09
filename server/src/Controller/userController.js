@@ -32,7 +32,7 @@ const userController = {
     createUser: async (req, res) => {
         try {
             // Check if user is admin
-            if (!req.user || !req.user.admin) {
+            if (!req.user || !req.user.isAdmin) {
                 return res.status(403).json({
                     message: "Bạn không có quyền tạo tài khoản",
                     status: "error"
@@ -57,7 +57,7 @@ const userController = {
                 password: hashedPassword,
                 phoneNumber: req.body.phoneNumber || "",
                 position: req.body.position || "",
-                admin: req.body.admin || false,
+                isAdmin: req.body.isAdmin || false,
                 isActive: true
             });
 
