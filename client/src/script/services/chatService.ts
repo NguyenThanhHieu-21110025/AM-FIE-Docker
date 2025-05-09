@@ -255,7 +255,7 @@ class ChatbotService {
       sessionId,
       role: "assistant",
       content:
-        "👋 Xin chào! Tôi là Trợ lý Quản lý Tài sản của Trường Đại học Sư phạm Kỹ thuật TP.HCM (HCMUTE).\n\nTôi có thể giúp bạn:\n• Tra cứu thông tin về tài sản trong trường\n• Tìm kiếm tài sản theo phòng, mã số, năm sử dụng\n• Cung cấp thông tin về giá trị, tình trạng tài sản\n• Trả lời các câu hỏi về quản lý tài sản\n\nHãy đặt câu hỏi để tôi có thể hỗ trợ bạn!",
+        "👋 Xin chào! Tôi là Trợ lý Quản lý Tài sản của Toà nhà F1 - Trường Đại học Sư phạm Kỹ thuật TP.HCM (HCMUTE).\n\nTôi có thể giúp bạn:\n• Tra cứu thông tin về tài sản trong trường\n• Tìm kiếm tài sản theo phòng, mã số, năm sử dụng\n• Cung cấp thông tin về giá trị, tình trạng tài sản\n• Trả lời các câu hỏi về quản lý tài sản\n\nHãy đặt câu hỏi để tôi có thể hỗ trợ bạn!",
       timestamp: new Date(),
     });
   }
