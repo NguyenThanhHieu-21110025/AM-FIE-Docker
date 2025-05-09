@@ -24,8 +24,28 @@ interface AssetSuggestion {
   code: string;
   _id?: string;
 }
+
+// Định nghĩa các loại tài sản
+const ASSET_TYPES = [
+  {
+    value: "TAI SAN CO DINH TT HOP TAC DAO TAO QUOC TE",
+    label: "Tài sản cố định"
+  },
+  {
+    value: "TAI SAN QUAN LY TT HOP TAC DAO TAO QUOC TE",
+    label: "Tài sản công cụ quản lý"
+  },
+  {
+    value: "TAI SAN TANG NAM",
+    label: "Tài sản tăng năm"
+  },
+  {
+    value: "TAI SAN VNT CONG CU DUNG CU TT HOP TAC DAO TAO QUOC TE",
+    label: "Tài sản vật nội thất, công cụ dụng cụ"
+  }
+];
+
 const CreateAssetPage = () => {
-  // Cập nhật initialFormData theo interface mới
   const initialFormData: Asset = {
     asset_code: "",
     asset_name: "",
@@ -46,6 +66,7 @@ const CreateAssetPage = () => {
     suggested_disposal: "",
     acquisition_source: "Lẻ",
     note: "",
+    type: "TAI SAN CO DINH TT HOP TAC DAO TAO QUOC TE" // Giá trị mặc định
   } as Asset;
 
   const [formData, setFormData] = useState<Asset>(initialFormData);
@@ -55,16 +76,13 @@ const CreateAssetPage = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [highlightedSuggestion, setHighlightedSuggestion] = useState(-1);
   const { getFilteredSuggestions } = useAssetSuggestions();
-  const [filteredSuggestions, setFilteredSuggestions] = useState<
-    AssetSuggestion[]
-  >([]);
+  const [filteredSuggestions, setFilteredSuggestions] = useState<AssetSuggestion[]>([]);
   const [activeField, setActiveField] = useState<"name" | "code">("name");
   const [nameInputFocused, setNameInputFocused] = useState(false);
   const [codeInputFocused, setCodeInputFocused] = useState(false);
 
   useScrollToMain();
 
-  // Không thay đổi vì đã đúng cấu trúc
   useEffect(() => {
     const originPrice = formData.accounting?.origin_price || 0;
     const depreciationRate = formData.depreciation_rate || 0;
@@ -77,7 +95,6 @@ const CreateAssetPage = () => {
     }));
   }, [formData.depreciation_rate, formData.accounting?.origin_price]);
 
-  // Các query không thay đổi
   const { data: userList, isLoading: isLoadingUserList } = useQuery({
     queryFn: async () => {
       const token = (await refreshAccessToken()) || accessToken;
@@ -97,11 +114,9 @@ const CreateAssetPage = () => {
     enabled: !!userList && userList.length > 0,
   });
 
-  // handleChange không thay đổi
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) {
-    // Giữ nguyên code của handleChange vì cấu trúc dữ liệu không thay đổi
     const { name, value } = e.target;
 
     if (e.target.className.includes("input-price")) {
@@ -206,7 +221,6 @@ const CreateAssetPage = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   }
 
-  // handleSelect không cần thay đổi nhiều vì chúng ta đang tạo mới, không xử lý dữ liệu đã populate
   function handleSelect(e: React.ChangeEvent<HTMLSelectElement>) {
     const { name, value } = e.target;
 
@@ -240,7 +254,14 @@ const CreateAssetPage = () => {
     }
   }
 
-  // handleSubmit cập nhật để phù hợp với interface mới
+  // Thêm hàm xử lý thay đổi loại tài sản
+  const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      type: e.target.value
+    }));
+  };
+
   async function handleSubmit(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
 
@@ -253,7 +274,6 @@ const CreateAssetPage = () => {
         throw new Error("Không thể xác thực. Vui lòng đăng nhập lại.");
       }
 
-      // Loại bỏ các trường formatting và computed
       const {
         _id,
         unit_price_formatted,
@@ -266,14 +286,12 @@ const CreateAssetPage = () => {
         ...requestData
       } = formData;
 
-      // Đảm bảo location và responsible_user là string ID
       const assetRequest: AssetRequest = {
         ...requestData,
         location: getLocationId(requestData.location),
         responsible_user: getUserId(requestData.responsible_user),
       };
 
-      // Validate required fields
       if (!assetRequest.asset_name) {
         alert("Vui lòng nhập tên tài sản");
         return;
@@ -295,7 +313,6 @@ const CreateAssetPage = () => {
         return;
       }
 
-      // Đảm bảo origin_price luôn được tính chính xác
       assetRequest.accounting.origin_price =
         assetRequest.accounting.quantity * assetRequest.accounting.unit_price;
 
@@ -318,10 +335,6 @@ const CreateAssetPage = () => {
         alert("Đã xảy ra lỗi khi tạo tài sản");
       }
     }
-  }
-
-  if (isLoadingUserList || isLoadingRoomList) {
-    return <Loader />;
   }
 
   // Function to handle input change with suggestions
@@ -347,11 +360,7 @@ const CreateAssetPage = () => {
     setActiveField("code");
   };
 
-  // Function to handle suggestion selection
-  const handleSelectSuggestion = (suggestion: {
-    name: string;
-    code: string;
-  }) => {
+  const handleSelectSuggestion = (suggestion: { name: string; code: string }) => {
     setFormData((prev) => ({
       ...prev,
       asset_name: suggestion.name,
@@ -360,7 +369,6 @@ const CreateAssetPage = () => {
     setShowSuggestions(false);
   };
 
-  // Function to handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!showSuggestions) return;
 
@@ -388,23 +396,44 @@ const CreateAssetPage = () => {
         break;
     }
   };
+
+  if (isLoadingUserList || isLoadingRoomList) {
+    return <Loader />;
+  }
+
   return (
     <main ref={mainRef} className="info-page">
       <div className="container">
         <div className="layout">
-          {/* Header Section - unchanged */}
-          <div
-            className="back-button"
-            onClick={() => navigate("/asset-dashboard")}
-          >
+          <div className="back-button" onClick={() => navigate("/asset-dashboard")}>
             <FaAngleLeft size={20} />
             <p>Trở về</p>
           </div>
           <h1 className="title">Tạo Tài Sản Mới</h1>
 
-          {/* Form Section */}
           <form className="info-body">
-            {/* Row 1: Tên tài sản và mã tài sản trên cùng một hàng */}
+            {/* Phần chọn loại tài sản - Thêm vào đầu form */}
+            <div className="normal-info">
+              <div className="info-container">
+                <div className="info-header">
+                  Loại tài sản: <span className="required">*</span>
+                </div>
+                <select
+                  name="type"
+                  value={formData.type}
+                  onChange={handleTypeChange}
+                  required
+                >
+                  {ASSET_TYPES.map((assetType) => (
+                    <option key={assetType.value} value={assetType.value}>
+                      {assetType.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Row 1: Tên tài sản và mã tài sản */}
             <div className="two-column-row">
               <div className="column">
                 <div className="info-container">
@@ -495,7 +524,7 @@ const CreateAssetPage = () => {
               </div>
             </div>
 
-            {/* Row 2: Quy cách chiếm 2/3 và năm sử dụng chiếm 1/3 */}
+            {/* Row 2: Quy cách và năm sử dụng */}
             <div className="two-column-row uneven">
               <div className="column wide">
                 <div className="info-container">
@@ -525,13 +554,12 @@ const CreateAssetPage = () => {
               </div>
             </div>
 
-            {/* ACCOUNTING SECTION - with clear heading and visual distinction */}
+            {/* ACCOUNTING SECTION */}
             <div className="section-divider">
               <h3 className="section-title">Theo sổ kế toán</h3>
             </div>
 
             <div className="normal-info accounting-section">
-              {/* Accounting Quantity */}
               <div className="info-container">
                 <div className="info-header">
                   Số lượng: <span className="required">*</span>
@@ -546,7 +574,6 @@ const CreateAssetPage = () => {
                 />
               </div>
 
-              {/* Unit Price */}
               <div className="info-container">
                 <div className="info-header">
                   Đơn giá (VNĐ): <span className="required">*</span>
@@ -564,7 +591,6 @@ const CreateAssetPage = () => {
                 />
               </div>
 
-              {/* Origin Price */}
               <div className="info-container">
                 <div className="info-header">Nguyên giá (VNĐ):</div>
                 <input
@@ -580,13 +606,12 @@ const CreateAssetPage = () => {
               </div>
             </div>
 
-            {/* DIFFERENTIAL SECTION - with clear heading and visual distinction */}
+            {/* DIFFERENTIAL SECTION */}
             <div className="section-divider">
               <h3 className="section-title">Chênh lệch</h3>
             </div>
 
             <div className="normal-info differential-section">
-              {/* Actual Count */}
               <div className="info-container">
                 <div className="info-header">KK thực tế:</div>
                 <input
@@ -598,7 +623,6 @@ const CreateAssetPage = () => {
                 />
               </div>
 
-              {/* Surplus Quantity */}
               <div className="info-container">
                 <div className="info-header">SL thừa:</div>
                 <input
@@ -609,7 +633,6 @@ const CreateAssetPage = () => {
                 />
               </div>
 
-              {/* Missing Quantity */}
               <div className="info-container">
                 <div className="info-header">SL thiếu:</div>
                 <input
@@ -627,7 +650,6 @@ const CreateAssetPage = () => {
             </div>
 
             <div className="normal-info depreciation-section">
-              {/* Depreciation Rate */}
               <div className="info-container">
                 <div className="info-header">Tỷ lệ hao mòn (%):</div>
                 <input
@@ -640,7 +662,6 @@ const CreateAssetPage = () => {
                 />
               </div>
 
-              {/* Remaining Value */}
               <div className="info-container">
                 <div className="info-header">Giá trị còn lại (VNĐ):</div>
                 <input
@@ -655,7 +676,6 @@ const CreateAssetPage = () => {
                 />
               </div>
 
-              {/* Asset Status */}
               <div className="info-container">
                 <div className="info-header">Đề nghị thanh lý:</div>
                 <input
@@ -673,7 +693,6 @@ const CreateAssetPage = () => {
             </div>
 
             <div className="normal-info">
-              {/* Acquisition Source */}
               <div className="info-container">
                 <div className="info-header">
                   Nguồn: <span className="required">*</span>
@@ -688,7 +707,7 @@ const CreateAssetPage = () => {
                   <option value="DA">Dự án</option>
                 </select>
               </div>
-              {/* Location and Responsibility */}
+              
               <div className="info-container">
                 <div className="info-header">Địa chỉ phòng: </div>
                 <select
@@ -722,7 +741,7 @@ const CreateAssetPage = () => {
               </div>
             </div>
 
-            {/* Notes - unchanged */}
+            {/* Notes */}
             <div className="long-info">
               <div className="info-header">Ghi chú: </div>
               <textarea
@@ -732,7 +751,7 @@ const CreateAssetPage = () => {
               />
             </div>
 
-            {/* Submit Button - unchanged */}
+            {/* Submit Button */}
             <div className="button-container">
               <button className="submit-btn" onClick={handleSubmit}>
                 Tạo tài sản
