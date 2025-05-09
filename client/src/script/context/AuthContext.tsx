@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { checkTokenExpiration, getPayload } from "../utils/jwt";
 
+// Interface đầu vào
 export interface LoginUser {
   email: string;
   password: string;
@@ -20,22 +21,25 @@ export interface RegisterUser {
   password: string;
 }
 
+// Interface context
 interface AuthContextType {
   accessToken: string | null;
   _id: string | null;
   email: string | null;
-  admin: boolean | null;
+  role: string | null;  // Thay 'admin' thành 'role'
   loading: boolean;
   login: (user: LoginUser) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   register: (user: RegisterUser) => Promise<boolean>;
   refreshAccessToken: () => Promise<string | null>;
 }
 
+// Tạo context
 export const AuthContext = createContext<AuthContextType | undefined>(
   undefined
 );
 
+// Provider props
 interface AuthProviderProps {
   children: ReactNode;
 }
@@ -43,149 +47,146 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
-  const [admin, setAdmin] = useState<boolean | null>(null);
+  const [role, setRole] = useState<string | null>(null);  // Thay 'admin' thành 'role'
   const [_id, set_id] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const HANDLE_AUTH_URL = import.meta.env.VITE_API_URL + "/auth";
+  const API_URL = import.meta.env.VITE_API_URL + "/auth";
 
+  // Lấy access token mới từ refresh token (cookie)
   const refreshAccessToken = useCallback(async (): Promise<string | null> => {
     try {
-      const response = await fetch(`${HANDLE_AUTH_URL}/refresh`, {
+      const res = await fetch(`${API_URL}/refresh`, {
+        method: "POST",
+        credentials: "include",  // Đảm bảo cookie được gửi
+      });
+
+      const data = await res.json();
+      if (res.ok && data.accessToken) {
+        const { accessToken } = data;
+        const payload = getPayload(accessToken);  // Giải mã token
+        setAccessToken(accessToken);             // Lưu access token vào state
+        setEmail(payload.email);                 // Lưu email
+        setRole(payload.role);                   // Lưu role
+        set_id(payload.id);                      // Lưu id người dùng
+        localStorage.setItem("accessToken", accessToken); // Lưu vào localStorage
+        return accessToken;
+      }
+
+      return null;  // Nếu không có accessToken hoặc lỗi
+    } catch (err) {
+      console.error("Refresh token failed:", err);
+      return null;
+    }
+  }, []);
+
+  // Đăng nhập
+  const login = async (user: LoginUser): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/login`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(user),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const { accessToken, email, role, userid } = data;  // Lấy role thay vì admin
+        setAccessToken(accessToken);
+        setEmail(email);
+        setRole(role);  // Lưu role vào state
+        set_id(userid);
+        localStorage.setItem("accessToken", accessToken); // Lưu vào localStorage
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error("Login failed:", err);
+      return false;
+    }
+  };
+
+  // Đăng ký
+  const register = async (user: RegisterUser): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/register`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(user),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const { accessToken, email, role, userid } = data;  // Lấy role thay vì admin
+        setAccessToken(accessToken);
+        setEmail(email);
+        setRole(role);  // Lưu role vào state
+        set_id(userid);
+        localStorage.setItem("accessToken", accessToken); // Lưu vào localStorage
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error("Register failed:", err);
+      return false;
+    }
+  };
+
+  // Đăng xuất
+  const logout = async (): Promise<void> => {
+    try {
+      await fetch(`${API_URL}/logout`, {
         method: "POST",
         credentials: "include",
       });
-      const data = await response.json();
-      if (response.ok) {
-        const {
-          email: emailToken,
-          admin: adminToken,
-          id,
-        } = getPayload(data.accessToken);
-        setEmail(emailToken);
-        setAdmin(adminToken);
-        set_id(id);
-
-        return data.accessToken;
-      } else {
-        return null;
-      }
-    } catch (error) {
-      console.error("Failed to fetch access token:", error);
-      return null;
-    }
-  }, [HANDLE_AUTH_URL]);
-
-  const login = async (user: LoginUser): Promise<boolean> => {
-    try {
-      const response = await fetch(`${HANDLE_AUTH_URL}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include" as RequestCredentials,
-        body: JSON.stringify(user),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setAccessToken(data.accessToken);
-        setEmail(data.email);
-        setAdmin(data.admin);
-        set_id(data.userid);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Login failed:", error);
-      return false;
+    } catch (err) {
+      console.error("Logout error:", err);
+    } finally {
+      setAccessToken(null);
+      setEmail(null);
+      setRole(null);  // Xóa role khi logout
+      set_id(null);
+      localStorage.removeItem("accessToken");  // Xóa token khỏi localStorage khi logout
     }
   };
 
-  const logout = () => {
-    setAccessToken(null);
-    setEmail(null);
-  };
-
-  const register = async (user: RegisterUser): Promise<boolean> => {
-    try {
-      const response = await fetch(`${HANDLE_AUTH_URL}/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include" as RequestCredentials,
-        body: JSON.stringify(user),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setAccessToken(data.accessToken);
-        setEmail(data.email);
-        setAdmin(data.admin);
-        set_id(data.userid);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Registration failed:", error);
-      return false;
-    }
-  };
-
+  // Tự động kiểm tra và refresh token khi load trang
   useEffect(() => {
-    const initializeAuth = async () => {
+    const initialize = async () => {
       try {
-        let token = accessToken;
+        let token = localStorage.getItem("accessToken");  // Kiểm tra token trong localStorage
         if (!token) {
           token = await refreshAccessToken();
         }
-        if (token) {
-          const isExpired = checkTokenExpiration(token);
-          if (isExpired) {
-            token = await refreshAccessToken();
-          }
-          if (token) {
-            try {
-              const {
-                email: emailToken,
-                admin: adminToken,
-                id,
-              } = getPayload(token);
-              set_id(id);
-              setEmail(emailToken);
-              setAdmin(adminToken);
-              return;
-            } catch (decodeError) {
-              console.error("Failed to decode token:", decodeError);
-              set_id(null);
-              setEmail(null);
-              setAdmin(null);
-            }
-          }
-          set_id(null);
-          setEmail(null);
-          setAdmin(null);
-          return;
+        if (token && !checkTokenExpiration(token)) {
+          const payload = getPayload(token);
+          setAccessToken(token);
+          setEmail(payload.email);
+          setRole(payload.role);  // Lưu role từ token vào state
+          set_id(payload.id);
+        } else {
+          await refreshAccessToken();
         }
-        set_id(null);
-        setEmail(null);
-        setAdmin(null);
-        return;
-      } catch (error) {
-        console.error("Failed to initialize authentication:", error);
-        set_id(null);
-        setEmail(null);
-        setAdmin(null);
-      }
-      finally {
+      } catch (err) {
+        console.error("Init auth failed:", err);
+      } finally {
         setLoading(false);
       }
     };
-    initializeAuth();
-  }, [accessToken, refreshAccessToken]);
+    initialize();
+  }, [refreshAccessToken]);
 
   return (
     <AuthContext.Provider
       value={{
         accessToken,
+        _id,
         email,
-        admin,
-        _id: _id,
+        role,  // Cung cấp role thay vì admin
         loading,
         login,
         logout,
@@ -198,6 +199,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   );
 };
 
+// Custom hook
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
