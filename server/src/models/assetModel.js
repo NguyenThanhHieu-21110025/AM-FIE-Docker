@@ -114,7 +114,13 @@ const assetsSchema = new mongoose.Schema({
     history: {
         type: [historyItemSchema],
         description: "Lịch sử kiểm kê và thay đổi"
-    }
+    },
+    type: {
+        type: String,
+        enum: ["TAI SAN CO DINH TT HOP TAC DAO TAO QUOC TE", "TAI SAN QUAN LY TT HOP TAC DAO TAO QUOC TE", "TAI SAN TANG NAM", "TAI SAN VNT CONG CU DUNG CU TT HOP TAC DAO TAO QUOC TE"],
+        required: true,
+        description: "Loại tài sản"
+    },
 });
 
 assetsSchema.index({ name: 1 });
