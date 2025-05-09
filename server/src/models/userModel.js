@@ -27,10 +27,11 @@ const userSchema = new mongoose.Schema({
         //validate: [isVietnamesePhoneNumber, 'Số điện thoại không hợp lệ'],
         description: "Số điện thoại người dùng"
     },
-    admin:{
-        type: Boolean,
-        default: false,
-    },
+    role: {
+        type: String,
+        enum: ['user', 'powerUser', 'admin'],
+        default: 'user'
+      },
     position: {
         type: String,
         description: "Chức vụ của người dùng"
