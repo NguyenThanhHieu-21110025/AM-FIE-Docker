@@ -6,13 +6,25 @@ const TokenModel = require("../models/tokenModel");
 const authController = {
     registerUser: async (req, res) => {
         try {
+            const {
+                name,
+                email,
+                password,
+                phoneNumber,
+                position,
+                role,
+            } = req.body;
+
             const salt = await bcrypt.genSalt(10);
-            const hashed = await bcrypt.hash(req.body.password, salt);
+            const hashedPassword = await bcrypt.hash(password, salt);
 
             const newUser = new User({
-                name: req.body.name,
-                email: req.body.email,
-                password: hashed,
+                name,
+                email,
+                password: hashedPassword,
+                phoneNumber,
+                position,
+                role, // nếu không truyền sẽ mặc định là 'user'
             });
 
             const user = await newUser.save();
@@ -20,13 +32,11 @@ const authController = {
             const accessToken = authController.generateAccessToken(user);
             const refreshToken = authController.generateRefreshToken(user);
 
-            // Lưu refresh token vào DB
             await TokenModel.create({
                 userId: user._id,
                 refreshToken,
             });
 
-            // Gửi refresh token qua cookie
             res.cookie("refreshToken", refreshToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === "production",
@@ -34,9 +44,10 @@ const authController = {
                 sameSite: "strict",
             });
 
-            const { password, ...others } = user._doc;
+            const { password: pw, ...others } = user._doc;
             res.status(201).json({ ...others, accessToken });
         } catch (err) {
+            console.error("Register error:", err);
             res.status(500).json({ message: "Server error", error: err.message });
         }
     },
@@ -72,6 +83,10 @@ const authController = {
                 return res.status(404).json({ message: "User not found!" });
             }
 
+            if (!user.isActive) {
+                return res.status(403).json({ message: "Account is deactivated!" });
+            }
+
             const validPassword = await bcrypt.compare(req.body.password, user.password);
             if (!validPassword) {
                 return res.status(401).json({ message: "Invalid password!" });
@@ -80,30 +95,26 @@ const authController = {
             const accessToken = authController.generateAccessToken(user);
             const refreshToken = authController.generateRefreshToken(user);
 
-            // Xoá token cũ nếu có
             await TokenModel.findOneAndDelete({ userId: user._id });
 
-            // Lưu token mới vào DB
             await TokenModel.create({
                 userId: user._id,
                 refreshToken,
             });
 
-            // Set cookie refresh token
             res.cookie("refreshToken", refreshToken, {
                 httpOnly: true,
-                // secure: true, // nếu dùng https
-                sameSite: "None", // quan trọng khi frontend-backend khác domain hoặc khác port
-                path: "/auth/refresh",
-                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
-              });
-              
+                secure: process.env.NODE_ENV === "production", 
+                sameSite: "None",
+                path: "/api/auth/refresh",
+                maxAge: 7 * 24 * 60 * 60 * 1000,
+            });
 
-            const { password, ...others } = user._doc;
+            const { password: pw, ...others } = user._doc;
             res.status(200).json({ ...others, accessToken });
         } catch (err) {
-            console.error("Error during login:", err);
-            res.status(500).json({ message: "Internal server error!" });
+            console.error("Login error:", err);
+            res.status(500).json({ message: "Internal server error" });
         }
     },
 
@@ -114,30 +125,26 @@ const authController = {
                 return res.status(401).json("You're not authenticated");
             }
 
-            // Kiểm tra token có tồn tại trong DB không
             const existingToken = await TokenModel.findOne({ refreshToken });
             if (!existingToken) {
                 return res.status(403).json("Refresh token is not valid");
             }
 
-            jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, async (err, user) => {
+            jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, async (err, userPayload) => {
                 if (err) {
                     return res.status(403).json("Invalid or expired refresh token");
                 }
 
-                // Xoá token cũ trong DB
                 await TokenModel.findOneAndDelete({ refreshToken });
 
-                const newAccessToken = authController.generateAccessToken(user);
-                const newRefreshToken = authController.generateRefreshToken(user);
+                const newAccessToken = authController.generateAccessToken(userPayload);
+                const newRefreshToken = authController.generateRefreshToken(userPayload);
 
-                // Lưu token mới vào DB
                 await TokenModel.create({
-                    userId: user.id,
+                    userId: userPayload.id,
                     refreshToken: newRefreshToken,
                 });
 
-                // Gửi lại cookie refresh token mới
                 res.cookie("refreshToken", newRefreshToken, {
                     httpOnly: true,
                     secure: process.env.NODE_ENV === "production",
@@ -148,7 +155,7 @@ const authController = {
                 return res.status(200).json({ accessToken: newAccessToken });
             });
         } catch (error) {
-            console.error("Error in requestRefreshToken:", error);
+            console.error("Refresh token error:", error);
             res.status(500).json("Internal server error");
         }
     },
@@ -173,13 +180,12 @@ const authController = {
                 return res.status(404).json({ message: "User not found" });
             }
 
-            // Xoá tất cả refresh token của user nếu có
             await TokenModel.deleteMany({ userId: user._id });
-            await user.remove();
+            await user.deleteOne();
 
             res.status(200).json({ message: "User deleted successfully" });
         } catch (err) {
-            res.status(500).json(err);
+            res.status(500).json({ message: "Delete failed", error: err.message });
         }
     },
 };

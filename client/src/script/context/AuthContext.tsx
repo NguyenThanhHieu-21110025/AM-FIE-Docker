@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { checkTokenExpiration, getPayload } from "../utils/jwt";
 
+// Interface đầu vào
 export interface LoginUser {
   email: string;
   password: string;
@@ -20,6 +21,7 @@ export interface RegisterUser {
   password: string;
 }
 
+// Interface context
 interface AuthContextType {
   accessToken: string | null;
   _id: string | null;
@@ -27,15 +29,17 @@ interface AuthContextType {
   isAdmin: boolean | null;
   loading: boolean;
   login: (user: LoginUser) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   register: (user: RegisterUser) => Promise<boolean>;
   refreshAccessToken: () => Promise<string | null>;
 }
 
+// Tạo context
 export const AuthContext = createContext<AuthContextType | undefined>(
   undefined
 );
 
+// Provider props
 interface AuthProviderProps {
   children: ReactNode;
 }
@@ -47,90 +51,110 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [_id, set_id] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const HANDLE_AUTH_URL = import.meta.env.VITE_API_URL + "/auth";
+  const API_URL = import.meta.env.VITE_API_URL + "/auth";
 
+  // Lấy access token mới từ refresh token (cookie)
   const refreshAccessToken = useCallback(async (): Promise<string | null> => {
     try {
-      const response = await fetch(`${HANDLE_AUTH_URL}/refresh`, {
+      const res = await fetch(`${API_URL}/refresh`, {
+        method: "POST",
+        credentials: "include",  // Đảm bảo cookie được gửi
+      });
+
+      const data = await res.json();
+      if (res.ok && data.accessToken) {
+        const { accessToken } = data;
+        const payload = getPayload(accessToken);  // Giải mã token
+        setAccessToken(accessToken);             // Lưu access token vào state
+        setEmail(payload.email);                 // Lưu email
+        setIsAdmin(payload.isAdmin);                   // Lưu role
+        set_id(payload.id);                      // Lưu id người dùng
+        localStorage.setItem("accessToken", accessToken); // Lưu vào localStorage
+        return accessToken;
+      }
+
+      return null;  // Nếu không có accessToken hoặc lỗi
+    } catch (err) {
+      console.error("Refresh token failed:", err);
+      return null;
+    }
+  }, []);
+
+  // Đăng nhập
+  const login = async (user: LoginUser): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/login`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(user),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setAccessToken(data.accessToken);
+        setEmail(data.email);
+        setIsAdmin(data.isAdmin);
+        set_id(data.userid);
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error("Login failed:", err);
+      return false;
+    }
+  };
+
+  // Đăng ký
+  const register = async (user: RegisterUser): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_URL}/register`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(user),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setAccessToken(data.accessToken);
+        setEmail(data.email);
+        setIsAdmin(data.isAdmin);
+        set_id(data.userid);
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error("Register failed:", err);
+      return false;
+    }
+  };
+
+  // Đăng xuất
+  const logout = async (): Promise<void> => {
+    try {
+      await fetch(`${API_URL}/logout`, {
         method: "POST",
         credentials: "include",
       });
-      const data = await response.json();
-      if (response.ok) {
-        const {
-          email: emailToken,
-          isAdmin: adminToken,
-          id,
-        } = getPayload(data.accessToken);
-        setEmail(emailToken);
-        setIsAdmin(adminToken);
-        set_id(id);
-
-        return data.accessToken;
-      } else {
-        return null;
-      }
-    } catch (error) {
-      console.error("Failed to fetch access token:", error);
-      return null;
-    }
-  }, [HANDLE_AUTH_URL]);
-
-  const login = async (user: LoginUser): Promise<boolean> => {
-    try {
-      const response = await fetch(`${HANDLE_AUTH_URL}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include" as RequestCredentials,
-        body: JSON.stringify(user),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setAccessToken(data.accessToken);
-        setEmail(data.email);
-        setIsAdmin(data.isAdmin);
-        set_id(data.userid);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Login failed:", error);
-      return false;
+    } catch (err) {
+      console.error("Logout error:", err);
+    } finally {
+      setAccessToken(null);
+      setEmail(null);
+      setIsAdmin(null);  // Xóa role khi logout
+      set_id(null);
+      localStorage.removeItem("accessToken");  // Xóa token khỏi localStorage khi logout
     }
   };
 
-  const logout = () => {
-    setAccessToken(null);
-    setEmail(null);
-  };
-
-  const register = async (user: RegisterUser): Promise<boolean> => {
-    try {
-      const response = await fetch(`${HANDLE_AUTH_URL}/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include" as RequestCredentials,
-        body: JSON.stringify(user),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setAccessToken(data.accessToken);
-        setEmail(data.email);
-        setIsAdmin(data.isAdmin);
-        set_id(data.userid);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Registration failed:", error);
-      return false;
-    }
-  };
-
+  // Tự động kiểm tra và refresh token khi load trang
   useEffect(() => {
-    const initializeAuth = async () => {
+    const initialize = async () => {
       try {
-        let token = accessToken;
+        let token = localStorage.getItem("accessToken");  // Kiểm tra token trong localStorage
         if (!token) {
           token = await refreshAccessToken();
         }
@@ -176,13 +200,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setLoading(false);
       }
     };
-    initializeAuth();
-  }, [accessToken, refreshAccessToken]);
+    initialize();
+  }, [refreshAccessToken]);
 
   return (
     <AuthContext.Provider
       value={{
         accessToken,
+        _id,
         email,
         isAdmin,
         _id: _id,
@@ -198,6 +223,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   );
 };
 
+// Custom hook
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
