@@ -20,11 +20,15 @@ import ForgotPassword from "./pages/auth-pages/ForgotPasswordPage";
 import CreateUserPage from "./pages/user-pages/CreateUserPage";
 import AssetStatisticsPage from "./pages/asset-dashboard-statistics/AssetStatisticsPage";
 import ChatbotPage from "./pages/chatbot/ChatbotPage";
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import '../css/toast.css'
 
 function App() {
   const queryClient = new QueryClient();
 
   return (
+    <>
     <BrowserRouter>
       <AuthProvider>
         <QueryClientProvider client={queryClient}>
@@ -85,6 +89,19 @@ function App() {
         </QueryClientProvider>
       </AuthProvider>
     </BrowserRouter>
+    <ToastContainer 
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss={false}
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+    </>
   );
 }
 interface ProtectedRouteProps {

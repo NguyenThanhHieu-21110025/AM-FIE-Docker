@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
-import { FaBell } from "react-icons/fa";
-import { 
+import { FaBell, FaCheckCircle } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
+import "../../../../css/NotificationDropdown.css";
+import {
   Notification,
   getNotifications,
   markAsRead as markNotificationRead,
   markAllAsRead as markAllNotificationsRead,
-  formatNotificationTime
+  formatNotificationTime,
 } from "../../../interfaces/Notification";
 import { useAuth } from "../../../context/AuthContext";
 
@@ -13,7 +15,13 @@ const NotificationDropdown: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [markingAll, setMarkingAll] = useState(false);
+  const [actionFeedback, setActionFeedback] = useState<{
+    message: string;
+    isSuccess: boolean;
+  } | null>(null);
   const { accessToken, refreshAccessToken } = useAuth();
+  const navigate = useNavigate();
 
   const unreadCount = Array.isArray(notifications)
     ? notifications.filter((n) => !n.isRead).length
@@ -23,7 +31,7 @@ const NotificationDropdown: React.FC = () => {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      
+
       // Kiểm tra và refresh token nếu cần
       let token = accessToken;
       if (!token) {
@@ -34,10 +42,13 @@ const NotificationDropdown: React.FC = () => {
           return;
         }
       }
-      
+
       // Log để debug
-      console.log("Fetching notifications with token:", token.substring(0, 15) + "...");
-      
+      console.log(
+        "Fetching notifications with token:",
+        token.substring(0, 15) + "..."
+      );
+
       const notificationData = await getNotifications(token);
       console.log("Fetched notifications:", notificationData);
       setNotifications(notificationData);
@@ -52,7 +63,7 @@ const NotificationDropdown: React.FC = () => {
   // Lấy thông báo khi component được tạo
   useEffect(() => {
     fetchNotifications();
-    
+
     // Kiểm tra thông báo mới mỗi phút
     const interval = setInterval(fetchNotifications, 60000);
     return () => clearInterval(interval);
@@ -79,28 +90,60 @@ const NotificationDropdown: React.FC = () => {
   // Đánh dấu tất cả thông báo đã đọc
   const markAllAsRead = async () => {
     try {
+      setMarkingAll(true);
+
       // Kiểm tra và refresh token nếu cần
       let token = accessToken;
       if (!token) {
         token = await refreshAccessToken();
         if (!token) {
           console.error("Không thể refresh token");
+          setActionFeedback({
+            message: "Không thể xác thực. Vui lòng đăng nhập lại",
+            isSuccess: false,
+          });
           return;
         }
       }
-      
+
       const success = await markAllNotificationsRead(token);
-      
+
       if (success) {
-        setNotifications((prev) =>
-          prev.map((notification) => ({
-            ...notification,
-            isRead: true,
-          }))
+        // Thêm class animation cho tất cả thông báo
+        const unreadElements = document.querySelectorAll(
+          ".notification-item.unread"
         );
+        unreadElements.forEach((item) => {
+          item.classList.add("read-transition");
+        });
+
+        // Đợi animation hoàn thành rồi mới cập nhật state
+        setTimeout(() => {
+          setNotifications((prev) =>
+            prev.map((notification) => ({
+              ...notification,
+              isRead: true,
+            }))
+          );
+          setActionFeedback({
+            message: "Đã đánh dấu tất cả thông báo là đã đọc",
+            isSuccess: true,
+          });
+
+          // Tự động ẩn thông báo sau 3 giây
+          setTimeout(() => {
+            setActionFeedback(null);
+          }, 3000);
+        }, 500);
       }
     } catch (error) {
       console.error("Error marking all as read:", error);
+      setActionFeedback({
+        message: "Đã xảy ra lỗi khi đánh dấu đã đọc",
+        isSuccess: false,
+      });
+    } finally {
+      setMarkingAll(false);
     }
   };
 
@@ -116,9 +159,9 @@ const NotificationDropdown: React.FC = () => {
           return;
         }
       }
-      
+
       const success = await markNotificationRead(id, token);
-      
+
       if (success) {
         setNotifications((prev) =>
           prev.map((notification) =>
@@ -133,20 +176,38 @@ const NotificationDropdown: React.FC = () => {
     }
   };
 
-  // Định dạng thời gian tương đối
-  const formatDate = (dateString: string) => {
-    const now = new Date();
-    const date = new Date(dateString);
-    const diffInHours = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60 * 60)
-    );
+  // Xử lý click vào thông báo
+  const handleNotificationClick = async (notification: Notification) => {
+    try {
+      // Đánh dấu thông báo đã đọc
+      await markAsRead(notification._id);
 
-    if (diffInHours < 1) return "Vài phút trước";
-    if (diffInHours < 24) return `${diffInHours} giờ trước`;
-    if (diffInHours < 48) return "Hôm qua";
+      // Đóng dropdown sau khi click
+      setIsOpen(false);
 
-    const diffInDays = Math.floor(diffInHours / 24);
-    return `${diffInDays} ngày trước`;
+      // Chuyển hướng đến trang thông tin tương ứng dựa theo loại thông báo
+      if (notification.relatedItem && notification.itemModel) {
+        switch (notification.itemModel) {
+          case "Asset":
+            navigate(`/asset-dashboard/${notification.relatedItem}`);
+            break;
+          case "Room":
+            navigate(`/room-dashboard/${notification.relatedItem}`);
+            break;
+          case "User":
+            navigate(`/user-dashboard/${notification.relatedItem}`);
+            break;
+          default:
+            console.log("Không có trang để điều hướng cho loại thông báo này");
+            break;
+        }
+      } else {
+        // Nếu thông báo không có relatedItem, hiển thị thông báo
+        console.log("Thông báo này không có liên kết đến trang chi tiết");
+      }
+    } catch (error) {
+      console.error("Lỗi khi xử lý click thông báo:", error);
+    }
   };
 
   return (
@@ -165,11 +226,26 @@ const NotificationDropdown: React.FC = () => {
             {Array.isArray(notifications) &&
               notifications.length > 0 &&
               unreadCount > 0 && (
-                <button className="mark-all-read" onClick={markAllAsRead}>
-                  Đánh dấu tất cả đã đọc
+                <button
+                  className={`mark-all-read ${markingAll ? "loading" : ""}`}
+                  onClick={markAllAsRead}
+                  disabled={markingAll}
+                >
+                  {markingAll ? "Đang xử lý..." : "Đánh dấu tất cả đã đọc"}
                 </button>
               )}
           </div>
+          {/* Thêm thông báo phản hồi */}
+          {actionFeedback && (
+            <div
+              className={`action-feedback ${
+                actionFeedback.isSuccess ? "success" : "error"
+              }`}
+            >
+              {actionFeedback.isSuccess && <FaCheckCircle />}
+              {actionFeedback.message}
+            </div>
+          )}
 
           <div className="notification-list">
             {loading ? (
@@ -183,13 +259,16 @@ const NotificationDropdown: React.FC = () => {
                   className={`notification-item ${
                     !notification.isRead ? "unread" : ""
                   }`}
-                  onClick={() => markAsRead(notification._id)}
+                  onClick={() => handleNotificationClick(notification)}
                 >
                   <div className="notification-content">
                     <p>{notification.message}</p>
                     <span className="notification-date">
-                      {formatDate(notification.createdAt)}
+                      {formatNotificationTime(notification.createdAt)}
                     </span>
+                    {notification.relatedItem && notification.itemModel && (
+                      <span className="notification-link">Xem chi tiết</span>
+                    )}
                   </div>
                 </div>
               ))

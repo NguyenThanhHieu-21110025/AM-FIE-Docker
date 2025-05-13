@@ -5,7 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import { FaAngleLeft } from "react-icons/fa";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
+import { useToast } from "../../hooks/useToast";
 
 const CreateUserPage = () => {
   const [formData, setFormData] = useState<CreateUserPayload>({
@@ -19,6 +19,7 @@ const CreateUserPage = () => {
   const [loading, setLoading] = useState(false);
   const { refreshAccessToken, accessToken } = useAuth();
   const ICON_SIZE = 20;
+  const { showToast } = useToast();
 
   const navigate = useNavigate();
   const mainRef = useMainRef();
@@ -36,30 +37,48 @@ const CreateUserPage = () => {
     e.preventDefault();
     
     // Validation
-    if (!formData.name || !formData.email || !formData.password) {
-      toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
-      return;
-    }
+  if (!formData.name || !formData.email || !formData.password) {
+    showToast("Vui lòng điền đầy đủ thông tin bắt buộc", "warning");
+    return;
+  }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(formData.email)) {
+    showToast("Email không hợp lệ", "warning");
+    return;
+  }
+
+  // Validate password length
+  if (formData.password.length < 6) {
+    showToast("Mật khẩu phải có ít nhất 6 ký tự", "warning");
+    return;
+  }
 
     setLoading(true);
     try {
-      let token = accessToken;
-      if (!token) {
-        token = await refreshAccessToken();
-        if (!token) throw new Error("Không thể xác thực");
-      }
-
-      const result = await createUser(formData, token);
-      
-      if (result.status === 'success') {
-        toast.success(result.message);
-        navigate('/user-dashboard');
-      }
-    } catch (error: any) {
-      toast.error(error.message || "Có lỗi xảy ra khi tạo tài khoản");
-    } finally {
-      setLoading(false);
+    let token = accessToken;
+    if (!token) {
+      token = await refreshAccessToken();
+      if (!token) throw new Error("Phiên đăng nhập hết hạn");
     }
+
+    const result = await createUser(formData, token);
+    
+    if (result.status === 'success') {
+      showToast("Tạo tài khoản thành công", "success");
+      navigate('/user-dashboard');
+    } else {
+      showToast(result.message || "Có lỗi xảy ra khi tạo tài khoản", "error");
+    }
+  } catch (error: any) {
+    showToast(
+      error.response?.data?.message || error.message || "Có lỗi xảy ra", 
+      "error"
+    );
+  } finally {
+    setLoading(false);
+  }
   }
 
   return (

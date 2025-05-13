@@ -14,6 +14,7 @@ import {
   getRoomById,
   updateRoom,
 } from "../../interfaces/Room";
+import { useToast } from "../../hooks/useToast";
 
 const RoomInfoPage = () => {
   const [formData, setFormData] = useState<Room>({} as Room);
@@ -22,6 +23,7 @@ const RoomInfoPage = () => {
   const location = useLocation();
   const id = location.pathname.split("/").pop() as string;
   const ICON_SIZE = 20;
+  const { showToast } = useToast();
 
   const { data, isLoading: isLoadingRoom } = useQuery<Room>({
     queryFn: async () => {
@@ -93,23 +95,47 @@ const RoomInfoPage = () => {
       | React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) {
     e.preventDefault();
-    let token = accessToken;
-    if (!token) {
-      token = await refreshAccessToken();
+    try {
+      let token = accessToken;
       if (!token) {
-        throw new Error("Unable to refresh access token");
+        token = await refreshAccessToken();
+        if (!token) {
+          showToast("Không thể xác thực. Vui lòng đăng nhập lại.", "error"); 
+          return;
+        }
+      }
+      
+      // Validate required fields
+      if (!formData.name) {
+        showToast("Vui lòng nhập tên phòng", "warning"); 
+        return;
+      }
+      
+      if (!formData.building) {
+        showToast("Vui lòng nhập tên tòa nhà", "warning"); 
+        return;
+      }
+
+      const { responsible_user_name, ...filteredData } = formData;
+      const roomRequest = { ...filteredData } as RoomRequest;
+      
+      const result = await updateRoom(id, roomRequest, token);
+      
+      if (result) {
+        showToast("Cập nhật phòng thành công", "success"); 
+        setMode("info");
+      } else {
+        showToast("Không thể cập nhật phòng. Vui lòng thử lại!", "error"); 
+      }
+    } catch (error: any) {
+      console.error("Error updating room:", error);
+      
+      if (error.response?.data) {
+        showToast(`Lỗi: ${error.response.data.message || error.message}`, "error"); 
+      } else {
+        showToast("Đã xảy ra lỗi khi cập nhật phòng", "error"); 
       }
     }
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { responsible_user_name, ...filteredData } = formData;
-    const roomRequest = { ...filteredData } as RoomRequest;
-    console.log(roomRequest);
-    const result = await updateRoom(id, roomRequest, token);
-    if (result) {
-      console.log("created address successfully");
-      setMode("info");
-    } else console.log("failed to create address");
   }
 
   async function handleDelete(
@@ -118,16 +144,37 @@ const RoomInfoPage = () => {
       | React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) {
     e.preventDefault();
-    let token = accessToken;
-    if (!token) {
-      token = await refreshAccessToken();
-      if (!token) {
-        throw new Error("Unable to refresh access token");
-      }
+    
+    if (!confirm("Bạn có chắc chắn muốn xóa phòng này không?")) {
+      return;
     }
-    const result = await deleteRoom(id, token);
-    if (result) {
-      navigate("/room-dashboard");
+    
+    try {
+      let token = accessToken;
+      if (!token) {
+        token = await refreshAccessToken();
+        if (!token) {
+          showToast("Không thể xác thực. Vui lòng đăng nhập lại.", "error"); // Thay thế addAlert
+          return;
+        }
+      }
+      
+      const result = await deleteRoom(id, token);
+      
+      if (result) {
+        showToast("Xóa phòng thành công", "success"); // Thay thế addAlert
+        navigate("/room-dashboard");
+      } else {
+        showToast("Không thể xóa phòng. Vui lòng thử lại!", "error"); // Thay thế addAlert
+      }
+    } catch (error: any) {
+      console.error("Error deleting room:", error);
+      
+      if (error.response?.data) {
+        showToast(`Lỗi: ${error.response.data.message || error.message}`, "error"); // Thay thế addAlert
+      } else {
+        showToast("Đã xảy ra lỗi khi xóa phòng", "error"); // Thay thế addAlert
+      }
     }
   }
 

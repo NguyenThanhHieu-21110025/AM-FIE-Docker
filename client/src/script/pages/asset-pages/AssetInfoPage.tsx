@@ -16,13 +16,14 @@ import { useQuery } from "@tanstack/react-query";
 import { FaAngleLeft } from "react-icons/fa";
 import Loader from "../../components/Loader";
 import { convertToNumber, formatPrice } from "../../utils/formatPrice";
-
+import { useToast } from "../../hooks/useToast";
 const AssetInfoPage = () => {
   const [formData, setFormData] = useState<Asset>({} as Asset);
   const [mode, setMode] = useState<"info" | "update">("info");
   const { refreshAccessToken, accessToken } = useAuth();
   const id = location.pathname.split("/").pop() as string;
   const ICON_SIZE = 20;
+  const { showToast } = useToast();
 
   const navigate = useNavigate();
   const mainRef = useMainRef();
@@ -259,7 +260,8 @@ const AssetInfoPage = () => {
       if (!token) {
         token = await refreshAccessToken();
         if (!token) {
-          throw new Error("Unable to refresh access token");
+          showToast("Không thể xác thực. Vui lòng đăng nhập lại.", "error");
+          return;
         }
       }
   
@@ -278,7 +280,7 @@ const AssetInfoPage = () => {
   
       // Validate required fields
       if (!filteredData.asset_name) {
-        alert("Vui lòng nhập tên tài sản");
+        showToast("Vui lòng nhập tên tài sản", "warning");
         return;
       }
   
@@ -286,7 +288,7 @@ const AssetInfoPage = () => {
         !filteredData.accounting?.quantity ||
         filteredData.accounting?.quantity <= 0
       ) {
-        alert("Vui lòng nhập số lượng hợp lệ");
+        showToast("Vui lòng nhập số lượng hợp lệ", "warning");
         return;
       }
   
@@ -294,7 +296,7 @@ const AssetInfoPage = () => {
         !filteredData.accounting?.unit_price ||
         filteredData.accounting?.unit_price <= 0
       ) {
-        alert("Vui lòng nhập đơn giá hợp lệ");
+        showToast("Vui lòng nhập đơn giá hợp lệ", "warning");
         return;
       }
   
@@ -313,11 +315,10 @@ const AssetInfoPage = () => {
       const success = await updateAsset(id, assetRequest, token);
   
       if (success) {
-        alert("Cập nhật tài sản thành công");
-        // Navigate to dashboard instead of reloading
-        navigate("/asset-dashboard");
+        showToast("Cập nhật tài sản thành công", "success");
+        setMode("info");
       } else {
-        alert("Không thể cập nhật tài sản. Vui lòng thử lại!");
+        showToast("Không thể cập nhật tài sản. Vui lòng thử lại!", "error");
       }
     } catch (error: any) {
       console.error("Error updating asset:", error);
@@ -325,9 +326,9 @@ const AssetInfoPage = () => {
       // Hiển thị chi tiết lỗi nếu có
       if (error.response?.data) {
         console.error("Server error details:", error.response.data);
-        alert(`Lỗi: ${error.response.data.message || error.message}`);
+        showToast(`Lỗi: ${error.response.data.message || error.message}`, "error");
       } else {
-        alert("Đã xảy ra lỗi khi cập nhật tài sản");
+        showToast("Đã xảy ra lỗi khi cập nhật tài sản", "error");
       }
     }
   }
@@ -345,19 +346,20 @@ const AssetInfoPage = () => {
       if (!token) {
         token = await refreshAccessToken();
         if (!token) {
-          throw new Error("Unable to refresh access token");
+          showToast("Không thể xác thực. Vui lòng đăng nhập lại.", "error");
+          return;
         }
       }
       const result = await deleteAsset(id, token);
       if (result) {
-        alert("Xóa tài sản thành công");
+        showToast("Xóa tài sản thành công", "success");
         navigate("/asset-dashboard");
       } else {
-        alert("Không thể xóa tài sản. Vui lòng thử lại!");
+        showToast("Không thể xóa tài sản. Vui lòng thử lại!", "error");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting asset:", error);
-      alert("Đã xảy ra lỗi khi xóa tài sản");
+      showToast("Đã xảy ra lỗi khi xóa tài sản", "error");
     }
   }
 

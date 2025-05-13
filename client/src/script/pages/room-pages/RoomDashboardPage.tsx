@@ -7,36 +7,49 @@ import Loader from "../../components/Loader";
 import { useAuth } from "../../context/AuthContext";
 import { getRoomList } from "../../interfaces/Room";
 import { getUserList, User } from "../../interfaces/User";
+import { useToast } from "../../hooks/useToast"; 
 
 const RoomDashboardPage = () => {
   const mainRef = useMainRef();
   const { refreshAccessToken, accessToken } = useAuth();
+  const { showToast } = useToast(); 
+
   useScrollToMain();
 
   const { data: userList, isLoading: isLoadingUser } = useQuery({
     queryFn: async () => {
-      let token = accessToken;
-      if (!token) {
-        token = await refreshAccessToken();
+      try {
+        let token = accessToken;
         if (!token) {
-          throw new Error("Unable to refresh access token");
+          token = await refreshAccessToken();
+          if (!token) {
+            throw new Error("Unable to refresh access token");
+          }
         }
+        return getUserList(token);
+      } catch (error) {
+        showToast("Không thể tải danh sách người dùng", "error"); 
+        throw error;
       }
-      return getUserList(token);
     },
     queryKey: ["userList"],
   });
-
+  
   const { data: roomList, isLoading: isLoadingRoom } = useQuery({
     queryFn: async () => {
-      let token = accessToken;
-      if (!token) {
-        token = await refreshAccessToken();
+      try {
+        let token = accessToken;
         if (!token) {
-          throw new Error("Unable to refresh access token");
+          token = await refreshAccessToken();
+          if (!token) {
+            throw new Error("Unable to refresh access token");
+          }
         }
+        return getRoomList(token, userList as User[]);
+      } catch (error) {
+        showToast("Không thể tải danh sách phòng", "error"); 
+        throw error;
       }
-      return getRoomList(token, userList as User[]);
     },
     queryKey: ["roomList", userList],
     enabled: !!userList && userList.length > 0,
@@ -45,9 +58,7 @@ const RoomDashboardPage = () => {
   return (
     <main className="dashboard-page" ref={mainRef}>
       <div className="title">Danh Sách Địa Chỉ Phòng</div>
-      {isLoadingUser ||
-      isLoadingRoom ||
-      typeof roomList === "undefined" ? (
+      {isLoadingUser || isLoadingRoom || typeof roomList === "undefined" ? (
         <Loader />
       ) : (
         <Table

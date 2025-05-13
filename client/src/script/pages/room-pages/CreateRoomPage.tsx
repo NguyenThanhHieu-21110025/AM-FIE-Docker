@@ -12,6 +12,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { getUserList, User } from "../../interfaces/User";
 import Loader from "../../components/Loader";
+import { useToast } from "../../hooks/useToast";
 
 const CreateRoomPage = () => {
   const initialFormData: Room = {
@@ -25,6 +26,7 @@ const CreateRoomPage = () => {
   const [formData, setFormData] = useState<Room>(initialFormData);
   const { refreshAccessToken, accessToken } = useAuth();
   const ICON_SIZE = 20;
+  const { showToast } = useToast();
 
   const navigate = useNavigate();
   const mainRef = useMainRef();
@@ -70,12 +72,12 @@ const CreateRoomPage = () => {
     
     // Validate required fields
     if (!formData.name) {
-      alert("Vui lòng nhập tên phòng");
+      showToast("Vui lòng nhập tên phòng", "warning"); 
       return;
     }
     
     if (!formData.building) {
-      alert("Vui lòng nhập tên tòa nhà");
+      showToast("Vui lòng nhập tên tòa nhà", "warning"); 
       return;
     }
 
@@ -84,7 +86,8 @@ const CreateRoomPage = () => {
       if (!token) {
         token = await refreshAccessToken();
         if (!token) {
-          throw new Error("Unable to refresh access token");
+          showToast("Không thể xác thực. Vui lòng đăng nhập lại.", "error"); 
+          return;
         }
       }
 
@@ -92,14 +95,13 @@ const CreateRoomPage = () => {
       const { responsible_user_name, ...filteredData } = formData;
       const roomRequest = { ...filteredData } as RoomRequest;
       
-      console.log("Creating room with data:", roomRequest);
       const result = await createRoom(roomRequest, token);
       
       if (result) {
-        alert("Tạo phòng thành công");
+        showToast("Tạo phòng thành công", "success"); 
         navigate("/room-dashboard");
       } else {
-        alert("Không thể tạo phòng. Vui lòng thử lại!");
+        showToast("Không thể tạo phòng. Vui lòng thử lại!", "error"); 
       }
     } catch (error: any) {
       console.error("Error creating room:", error);
@@ -109,9 +111,9 @@ const CreateRoomPage = () => {
         const errorMsg = typeof error.response.data === 'string' 
           ? error.response.data 
           : error.response.data.message || JSON.stringify(error.response.data);
-        alert(`Lỗi: ${errorMsg}`);
+        showToast(`Lỗi: ${errorMsg}`, "error"); 
       } else {
-        alert("Đã xảy ra lỗi khi tạo phòng: " + (error.message || "Unknown error"));
+        showToast("Đã xảy ra lỗi khi tạo phòng: " + (error.message || "Unknown error"), "error"); 
       }
     }
   }

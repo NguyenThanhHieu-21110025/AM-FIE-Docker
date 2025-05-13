@@ -9,37 +9,49 @@ import { useAuth } from "../../context/AuthContext";
 import { getUserList, User } from "../../interfaces/User";
 import { Room, getRoomList } from "../../interfaces/Room";
 import { useState } from "react";
+import { useToast } from "../../hooks/useToast";
 
 const AssetDashboardPage = () => {
   const mainRef = useMainRef();
   const { refreshAccessToken, accessToken } = useAuth();
   const [selectedRoom, setSelectedRoom] = useState<string>("");
+  const { showToast } = useToast();
   useScrollToMain();
 
   const { data: userList, isLoading: isLoadingUser } = useQuery({
     queryFn: async () => {
-      let token = accessToken;
-      if (!token) {
-        token = await refreshAccessToken();
+      try {
+        let token = accessToken;
         if (!token) {
-          throw new Error("Unable to refresh access token");
+          token = await refreshAccessToken();
+          if (!token) {
+            throw new Error("Unable to refresh access token");
+          }
         }
+        return getUserList(token);
+      } catch (error) {
+        showToast("Không thể tải danh sách người dùng", "error");
+        throw error;
       }
-      return getUserList(token);
     },
     queryKey: ["userList"],
   });
 
   const { data: roomList, isLoading: isLoadingRoom } = useQuery({
     queryFn: async () => {
-      let token = accessToken;
-      if (!token) {
-        token = await refreshAccessToken();
+      try {
+        let token = accessToken;
         if (!token) {
-          throw new Error("Unable to refresh access token");
+          token = await refreshAccessToken();
+          if (!token) {
+            throw new Error("Unable to refresh access token");
+          }
         }
+        return getRoomList(token, userList as User[]);
+      } catch (error) {
+        showToast("Không thể tải danh sách phòng", "error");
+        throw error;
       }
-      return getRoomList(token, userList as User[]);
     },
     queryKey: ["roomList", userList],
     enabled: !!userList && userList.length > 0,
@@ -47,14 +59,19 @@ const AssetDashboardPage = () => {
 
   const { data: assetList, isLoading: isLoadingAsset } = useQuery({
     queryFn: async () => {
-      let token = accessToken;
-      if (!token) {
-        token = await refreshAccessToken();
+      try {
+        let token = accessToken;
         if (!token) {
-          throw new Error("Unable to refresh access token");
+          token = await refreshAccessToken();
+          if (!token) {
+            throw new Error("Unable to refresh access token");
+          }
         }
+        return getAssetList(token, userList as User[], roomList as Room[]);
+      } catch (error) {
+        showToast("Không thể tải danh sách tài sản", "error");
+        throw error;
       }
-      return getAssetList(token, userList as User[], roomList as Room[]);
     },
     queryKey: ["assetList", roomList],
     enabled: !!roomList && roomList.length > 0,

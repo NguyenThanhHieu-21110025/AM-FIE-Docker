@@ -18,7 +18,7 @@ import Loader from "../../components/Loader";
 import { convertToNumber, formatPrice } from "../../utils/formatPrice";
 import { useAssetSuggestions } from "../../hooks/useAssetSuggestions";
 import AutocompleteSuggestions from "../../components/AutocompleteSuggestions";
-
+import { useToast } from "../../hooks/useToast";
 interface AssetSuggestion {
   name: string;
   code: string;
@@ -61,6 +61,7 @@ const CreateAssetPage = () => {
   const [activeField, setActiveField] = useState<"name" | "code">("name");
   const [nameInputFocused, setNameInputFocused] = useState(false);
   const [codeInputFocused, setCodeInputFocused] = useState(false);
+  const { showToast } = useToast();
 
   useScrollToMain();
 
@@ -250,7 +251,8 @@ const CreateAssetPage = () => {
         token = await refreshAccessToken();
       }
       if (!token) {
-        throw new Error("Không thể xác thực. Vui lòng đăng nhập lại.");
+        showToast("Không thể xác thực. Vui lòng đăng nhập lại.", "error");
+        return;
       }
 
       // Loại bỏ các trường formatting và computed
@@ -275,7 +277,7 @@ const CreateAssetPage = () => {
 
       // Validate required fields
       if (!assetRequest.asset_name) {
-        alert("Vui lòng nhập tên tài sản");
+        showToast("Vui lòng nhập tên tài sản", "warning");
         return;
       }
 
@@ -283,7 +285,7 @@ const CreateAssetPage = () => {
         !assetRequest.accounting?.quantity ||
         assetRequest.accounting?.quantity <= 0
       ) {
-        alert("Vui lòng nhập số lượng hợp lệ");
+        showToast("Vui lòng nhập số lượng hợp lệ", "warning");
         return;
       }
 
@@ -291,7 +293,7 @@ const CreateAssetPage = () => {
         !assetRequest.accounting?.unit_price ||
         assetRequest.accounting?.unit_price <= 0
       ) {
-        alert("Vui lòng nhập đơn giá hợp lệ");
+        showToast("Vui lòng nhập đơn giá hợp lệ", "warning");
         return;
       }
 
@@ -304,18 +306,19 @@ const CreateAssetPage = () => {
       const result = await createAsset(assetRequest, token);
 
       if (result) {
+        showToast("Tạo tài sản thành công!", "success");
         navigate("/asset-dashboard");
       } else {
-        alert("Không thể tạo tài sản. Vui lòng thử lại!");
+        showToast("Không thể tạo tài sản. Vui lòng thử lại!", "error");
       }
     } catch (error: any) {
       console.error("Error creating asset:", error);
 
       if (error.response?.data) {
         console.error("Server error details:", error.response.data);
-        alert(`Lỗi: ${error.response.data.message || error.message}`);
+        showToast(`Lỗi: ${error.response.data.message || error.message}`, "error");
       } else {
-        alert("Đã xảy ra lỗi khi tạo tài sản");
+        showToast("Đã xảy ra lỗi khi tạo tài sản", "error");
       }
     }
   }
