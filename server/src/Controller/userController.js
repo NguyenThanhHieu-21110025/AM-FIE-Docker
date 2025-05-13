@@ -1,7 +1,7 @@
 const User = require("../models/userModel");
 const bcrypt = require("bcrypt");
 const emailService = require("../sendEmail");
-const createNotification = require("./notificationController");
+const { createNotification } = require("./notificationController");
 
 const userController = {
     getAllUsers: async ( req, res ) => {

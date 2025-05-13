@@ -98,11 +98,9 @@ const CreateAssetPage = () => {
     enabled: !!userList && userList.length > 0,
   });
 
-  // handleChange không thay đổi
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) {
-    // Giữ nguyên code của handleChange vì cấu trúc dữ liệu không thay đổi
     const { name, value } = e.target;
 
     if (e.target.className.includes("input-price")) {
@@ -207,7 +205,6 @@ const CreateAssetPage = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   }
 
-  // handleSelect không cần thay đổi nhiều vì chúng ta đang tạo mới, không xử lý dữ liệu đã populate
   function handleSelect(e: React.ChangeEvent<HTMLSelectElement>) {
     const { name, value } = e.target;
 
@@ -241,7 +238,6 @@ const CreateAssetPage = () => {
     }
   }
 
-  // handleSubmit cập nhật để phù hợp với interface mới
   async function handleSubmit(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
 
@@ -255,7 +251,6 @@ const CreateAssetPage = () => {
         return;
       }
 
-      // Loại bỏ các trường formatting và computed
       const {
         _id,
         unit_price_formatted,
@@ -275,7 +270,6 @@ const CreateAssetPage = () => {
         responsible_user: getUserId(requestData.responsible_user),
       };
 
-      // Validate required fields
       if (!assetRequest.asset_name) {
         showToast("Vui lòng nhập tên tài sản", "warning");
         return;
