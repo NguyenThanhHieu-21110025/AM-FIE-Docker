@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import {
   Asset,
   AssetRequest,
+  AssetType,
   createAsset,
   getLocationId,
   getUserId,
@@ -13,36 +14,41 @@ import { useAuth } from "../../context/AuthContext";
 import { getUserList, User } from "../../interfaces/User";
 import { Room, getRoomList } from "../../interfaces/Room";
 import { useQuery } from "@tanstack/react-query";
-import { FaAngleLeft } from "react-icons/fa";
+import { FaAngleLeft, FaSave, FaTimes, FaInfoCircle } from "react-icons/fa";
 import Loader from "../../components/Loader";
 import { convertToNumber, formatPrice } from "../../utils/formatPrice";
 import { useAssetSuggestions } from "../../hooks/useAssetSuggestions";
 import AutocompleteSuggestions from "../../components/AutocompleteSuggestions";
 import { useToast } from "../../hooks/useToast";
+
 interface AssetSuggestion {
   name: string;
   code: string;
   _id?: string;
 }
 
-// Định nghĩa các loại tài sản
+// Định nghĩa các loại tài sản với mã màu tương ứng
 const ASSET_TYPES = [
   {
     value: "TAI SAN CO DINH TT HOP TAC DAO TAO QUOC TE",
-    label: "Tài sản cố định"
+    label: "Tài sản cố định",
+    color: "#4f46e5", // indigo
   },
   {
     value: "TAI SAN QUAN LY TT HOP TAC DAO TAO QUOC TE",
-    label: "Tài sản công cụ quản lý"
+    label: "Tài sản công cụ quản lý",
+    color: "#0891b2", // cyan
   },
   {
     value: "TAI SAN TANG NAM",
-    label: "Tài sản tăng năm"
+    label: "Tài sản tăng năm",
+    color: "#059669", // emerald
   },
   {
     value: "TAI SAN VNT CONG CU DUNG CU TT HOP TAC DAO TAO QUOC TE",
-    label: "Tài sản vật nội thất, công cụ dụng cụ"
-  }
+    label: "Tài sản vật nội thất, công cụ dụng cụ",
+    color: "#d97706", // amber
+  },
 ];
 
 const CreateAssetPage = () => {
@@ -66,10 +72,12 @@ const CreateAssetPage = () => {
     suggested_disposal: "",
     acquisition_source: "Lẻ",
     note: "",
-    type: "TAI SAN CO DINH TT HOP TAC DAO TAO QUOC TE" // Giá trị mặc định
+    type: "TAI SAN CO DINH TT HOP TAC DAO TAO QUOC TE", // Giá trị mặc định
   } as Asset;
 
   const [formData, setFormData] = useState<Asset>(initialFormData);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentSection, setCurrentSection] = useState(0);
   const { refreshAccessToken, accessToken } = useAuth();
   const navigate = useNavigate();
   const mainRef = useMainRef();
@@ -80,10 +88,19 @@ const CreateAssetPage = () => {
   const [activeField, setActiveField] = useState<"name" | "code">("name");
   const [nameInputFocused, setNameInputFocused] = useState(false);
   const [codeInputFocused, setCodeInputFocused] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const { showToast } = useToast();
 
   useScrollToMain();
 
+  // Các section của form
+  const formSections = [
+    { title: "Thông tin chung", icon: "📋" },
+    { title: "Kế toán & Kiểm kê", icon: "💰" },
+    { title: "Khấu hao & Vị trí", icon: "📍" }
+  ];
+
+  // Auto-calculate remaining value based on depreciation rate
   useEffect(() => {
     const originPrice = formData.accounting?.origin_price || 0;
     const depreciationRate = formData.depreciation_rate || 0;
@@ -96,6 +113,7 @@ const CreateAssetPage = () => {
     }));
   }, [formData.depreciation_rate, formData.accounting?.origin_price]);
 
+  // Fetch user list
   const { data: userList, isLoading: isLoadingUserList } = useQuery({
     queryFn: async () => {
       const token = (await refreshAccessToken()) || accessToken;
@@ -105,6 +123,7 @@ const CreateAssetPage = () => {
     queryKey: ["userList"],
   });
 
+  // Fetch room list
   const { data: roomList, isLoading: isLoadingRoomList } = useQuery({
     queryFn: async () => {
       const token = (await refreshAccessToken()) || accessToken;
@@ -115,11 +134,16 @@ const CreateAssetPage = () => {
     enabled: !!userList && userList.length > 0,
   });
 
-  function handleChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) {
+  // Handle input changes for regular inputs and textareas
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value } = e.target;
+    
+    // Clear error on field change
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: "" }));
+    }
 
+    // Handle price inputs with formatting
     if (e.target.className.includes("input-price")) {
       const numericPrice = convertToNumber(value);
 
@@ -150,6 +174,7 @@ const CreateAssetPage = () => {
       return;
     }
 
+    // Handle quantity input changes with calculations
     if (name === "quantity") {
       const quantity = Number(value);
       const realCount = formData.quantity_differential?.real_count || 0;
@@ -183,6 +208,7 @@ const CreateAssetPage = () => {
       return;
     }
 
+    // Handle real count updates
     if (name === "real_count") {
       const real_count = Number(value);
       const quantity = formData.accounting?.quantity || 0;
@@ -210,6 +236,7 @@ const CreateAssetPage = () => {
       return;
     }
 
+    // Handle depreciation rate with min/max constraints
     if (name === "depreciation_rate") {
       const rate = Math.min(Math.max(parseFloat(value) || 0, 0), 100);
       setFormData((prev) => ({
@@ -219,11 +246,18 @@ const CreateAssetPage = () => {
       return;
     }
 
+    // Generic handler for other fields
     setFormData((prev) => ({ ...prev, [name]: value }));
   }
 
+  // Handle select element changes
   function handleSelect(e: React.ChangeEvent<HTMLSelectElement>) {
     const { name, value } = e.target;
+    
+    // Clear error on field change
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: "" }));
+    }
 
     if (name === "responsible_user") {
       const selectedUser = userList?.find((user) => user._id === value);
@@ -255,16 +289,57 @@ const CreateAssetPage = () => {
     }
   }
 
-  // Thêm hàm xử lý thay đổi loại tài sản
+  // Handle asset type changes
   const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      type: e.target.value
+      type: e.target.value as AssetType,
     }));
+    
+    if (errors.type) {
+      setErrors(prev => ({ ...prev, type: "" }));
+    }
   };
 
+  // Validate form before submission
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    
+    // Required fields validation
+    if (!formData.type) {
+      newErrors.type = "Vui lòng chọn loại tài sản";
+    }
+    
+    if (!formData.asset_name || formData.asset_name.trim() === "") {
+      newErrors.asset_name = "Vui lòng nhập tên tài sản";
+    }
+    
+    if (!formData.year_of_use) {
+      newErrors.year_of_use = "Vui lòng nhập năm sử dụng";
+    }
+    
+    if (!formData.accounting?.quantity || formData.accounting.quantity <= 0) {
+      newErrors.quantity = "Vui lòng nhập số lượng hợp lệ";
+    }
+    
+    if (!formData.accounting?.unit_price || formData.accounting.unit_price <= 0) {
+      newErrors.unit_price = "Vui lòng nhập đơn giá hợp lệ";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Handle form submission
   async function handleSubmit(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      showToast("Vui lòng điền đầy đủ thông tin bắt buộc", "warning");
+      return;
+    }
+    
+    setIsSubmitting(true);
 
     try {
       let token = accessToken;
@@ -273,6 +348,7 @@ const CreateAssetPage = () => {
       }
       if (!token) {
         showToast("Không thể xác thực. Vui lòng đăng nhập lại.", "error");
+        setIsSubmitting(false);
         return;
       }
 
@@ -290,31 +366,12 @@ const CreateAssetPage = () => {
 
       const assetRequest: AssetRequest = {
         ...requestData,
+        type: formData.type,
         location: getLocationId(requestData.location),
         responsible_user: getUserId(requestData.responsible_user),
       };
 
-      if (!assetRequest.asset_name) {
-        showToast("Vui lòng nhập tên tài sản", "warning");
-        return;
-      }
-
-      if (
-        !assetRequest.accounting?.quantity ||
-        assetRequest.accounting?.quantity <= 0
-      ) {
-        showToast("Vui lòng nhập số lượng hợp lệ", "warning");
-        return;
-      }
-
-      if (
-        !assetRequest.accounting?.unit_price ||
-        assetRequest.accounting?.unit_price <= 0
-      ) {
-        showToast("Vui lòng nhập đơn giá hợp lệ", "warning");
-        return;
-      }
-
+      // Ensure origin price is calculated correctly
       assetRequest.accounting.origin_price =
         assetRequest.accounting.quantity * assetRequest.accounting.unit_price;
 
@@ -327,23 +384,32 @@ const CreateAssetPage = () => {
         navigate("/asset-dashboard");
       } else {
         showToast("Không thể tạo tài sản. Vui lòng thử lại!", "error");
+        setIsSubmitting(false);
       }
     } catch (error: any) {
       console.error("Error creating asset:", error);
 
       if (error.response?.data) {
         console.error("Server error details:", error.response.data);
-        showToast(`Lỗi: ${error.response.data.message || error.message}`, "error");
+        showToast(
+          `Lỗi: ${error.response.data.message || error.message}`,
+          "error"
+        );
       } else {
         showToast("Đã xảy ra lỗi khi tạo tài sản", "error");
       }
+      setIsSubmitting(false);
     }
   }
 
-  // Function to handle input change with suggestions
+  // Handle asset name suggestions
   const handleAssetNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setFormData((prev) => ({ ...prev, asset_name: value }));
+    
+    if (errors.asset_name) {
+      setErrors(prev => ({ ...prev, asset_name: "" }));
+    }
 
     const suggestions = getFilteredSuggestions(value, "name");
     setFilteredSuggestions(suggestions);
@@ -352,6 +418,7 @@ const CreateAssetPage = () => {
     setActiveField("name");
   };
 
+  // Handle asset code suggestions
   const handleAssetCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setFormData((prev) => ({ ...prev, asset_code: value }));
@@ -363,15 +430,24 @@ const CreateAssetPage = () => {
     setActiveField("code");
   };
 
-  const handleSelectSuggestion = (suggestion: { name: string; code: string }) => {
+  // Handle selection from suggestions
+  const handleSelectSuggestion = (suggestion: {
+    name: string;
+    code: string;
+  }) => {
     setFormData((prev) => ({
       ...prev,
       asset_name: suggestion.name,
       asset_code: suggestion.code,
     }));
     setShowSuggestions(false);
+    
+    if (errors.asset_name) {
+      setErrors(prev => ({ ...prev, asset_name: "" }));
+    }
   };
 
+  // Handle keyboard navigation for suggestions
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!showSuggestions) return;
 
@@ -404,361 +480,470 @@ const CreateAssetPage = () => {
     return <Loader />;
   }
 
+  // Find selected asset type to get its color
+  const selectedAssetType = ASSET_TYPES.find(type => type.value === formData.type);
+  const assetTypeColor = selectedAssetType?.color || "#4f46e5";
+
+  // Render form section navigation
+  const renderSectionNav = () => (
+    <div className="form-section-nav">
+      {formSections.map((section, index) => (
+        <button
+          key={index}
+          type="button"
+          className={`section-nav-item ${currentSection === index ? 'active' : ''}`}
+          onClick={() => setCurrentSection(index)}
+        >
+          <span className="section-icon">{section.icon}</span>
+          <span className="section-title">{section.title}</span>
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <main ref={mainRef} className="info-page">
       <div className="container">
         <div className="layout">
-          <div className="back-button" onClick={() => navigate("/asset-dashboard")}>
-            <FaAngleLeft size={20} />
-            <p>Trở về</p>
+          <div className="header-actions">
+            <button
+              className="back-button"
+              onClick={() => navigate("/asset-dashboard")}
+              disabled={isSubmitting}
+            >
+              <FaAngleLeft size={20} />
+              <span>Trở về</span>
+            </button>
+            
+            <h1 className="title">
+              <span className="asset-type-badge" style={{ backgroundColor: assetTypeColor }}>
+                {selectedAssetType?.label || "Tài sản mới"}
+              </span>
+            </h1>
+
+            <div className="action-buttons">
+              <button 
+                className="cancel-btn" 
+                onClick={() => navigate("/asset-dashboard")}
+                disabled={isSubmitting}
+              >
+                <FaTimes size={16} />
+                <span>Hủy</span>
+              </button>
+              <button 
+                className="submit-btn" 
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+              >
+                <FaSave size={16} />
+                <span>{isSubmitting ? "Đang lưu..." : "Lưu tài sản"}</span>
+              </button>
+            </div>
           </div>
-          <h1 className="title">Tạo Tài Sản Mới</h1>
+
+          {renderSectionNav()}
 
           <form className="info-body">
-            {/* Phần chọn loại tài sản - Thêm vào đầu form */}
-            <div className="normal-info">
-              <div className="info-container">
-                <div className="info-header">
-                  Loại tài sản: <span className="required">*</span>
-                </div>
-                <select
-                  name="type"
-                  value={formData.type}
-                  onChange={handleTypeChange}
-                  required
-                >
-                  {ASSET_TYPES.map((assetType) => (
-                    <option key={assetType.value} value={assetType.value}>
-                      {assetType.label}
-                    </option>
+            {/* Section 0: Thông tin chung */}
+            <div className={`form-section ${currentSection === 0 ? 'visible' : 'hidden'}`}>
+              {/* Loại tài sản */}
+              <div className="section-card">
+                <h3 className="section-card-title">Loại tài sản</h3>
+                <div className="asset-type-selector">
+                  {ASSET_TYPES.map(type => (
+                    <div 
+                      key={type.value} 
+                      className={`asset-type-option ${formData.type === type.value ? 'selected' : ''}`}
+                      style={{ 
+                        borderColor: formData.type === type.value ? type.color : 'transparent',
+                        backgroundColor: formData.type === type.value ? `${type.color}15` : 'transparent'
+                      }}
+                      onClick={() => setFormData(prev => ({ ...prev, type: type.value as AssetType }))}
+                    >
+                      <div className="asset-type-color" style={{ backgroundColor: type.color }}></div>
+                      <div className="asset-type-label">{type.label}</div>
+                    </div>
                   ))}
-                </select>
+                </div>
+                {errors.type && <div className="error-message">{errors.type}</div>}
               </div>
-            </div>
 
-            {/* Row 1: Tên tài sản và mã tài sản */}
-            <div className="two-column-row">
-              <div className="column">
-                <div className="info-container">
-                  <div className="info-header">
-                    Tên tài sản: <span className="required">*</span>
-                  </div>
-                  <div className="autocomplete-container">
-                    <input
-                      type="text"
-                      name="asset_name"
-                      value={formData.asset_name || ""}
-                      onChange={handleAssetNameChange}
-                      onKeyDown={handleKeyDown}
-                      onFocus={() => {
-                        setNameInputFocused(true);
-                        if (
-                          formData.asset_name &&
-                          getFilteredSuggestions(formData.asset_name, "name")
-                            .length > 0
-                        ) {
-                          setShowSuggestions(true);
-                          setActiveField("name");
-                        }
-                      }}
-                      onBlur={() => {
-                        setTimeout(() => {
-                          setNameInputFocused(false);
-                          if (!codeInputFocused) {
-                            setShowSuggestions(false);
+              {/* Thông tin cơ bản */}
+              <div className="section-card">
+                <h3 className="section-card-title">Thông tin cơ bản</h3>
+                
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="asset_name" className="required">Tên tài sản</label>
+                    <div className="autocomplete-container">
+                      <input
+                        id="asset_name"
+                        type="text"
+                        name="asset_name"
+                        value={formData.asset_name || ""}
+                        onChange={handleAssetNameChange}
+                        onKeyDown={handleKeyDown}
+                        onFocus={() => {
+                          setNameInputFocused(true);
+                          if (
+                            formData.asset_name &&
+                            getFilteredSuggestions(formData.asset_name, "name").length > 0
+                          ) {
+                            setShowSuggestions(true);
+                            setActiveField("name");
                           }
-                        }, 200);
-                      }}
-                      className="autocomplete-input"
+                        }}
+                        onBlur={() => {
+                          setTimeout(() => {
+                            setNameInputFocused(false);
+                            if (!codeInputFocused) {
+                              setShowSuggestions(false);
+                            }
+                          }, 200);
+                        }}
+                        className={`autocomplete-input ${errors.asset_name ? 'input-error' : ''}`}
+                        placeholder="Nhập tên tài sản"
+                        required
+                      />
+                      {activeField === "name" && (
+                        <AutocompleteSuggestions
+                          suggestions={filteredSuggestions}
+                          onSelect={handleSelectSuggestion}
+                          visible={showSuggestions}
+                          highlightedIndex={highlightedSuggestion}
+                        />
+                      )}
+                    </div>
+                    {errors.asset_name && <div className="error-message">{errors.asset_name}</div>}
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="asset_code">Mã tài sản</label>
+                    <div className="autocomplete-container">
+                      <input
+                        id="asset_code"
+                        type="text"
+                        name="asset_code"
+                        value={formData.asset_code || ""}
+                        onChange={handleAssetCodeChange}
+                        onKeyDown={handleKeyDown}
+                        onFocus={() => {
+                          setCodeInputFocused(true);
+                          if (
+                            formData.asset_code &&
+                            getFilteredSuggestions(formData.asset_code, "code").length > 0
+                          ) {
+                            setShowSuggestions(true);
+                            setActiveField("code");
+                          }
+                        }}
+                        onBlur={() => {
+                          setTimeout(() => {
+                            setCodeInputFocused(false);
+                            if (!nameInputFocused) {
+                              setShowSuggestions(false);
+                            }
+                          }, 200);
+                        }}
+                        className="autocomplete-input"
+                        placeholder="Nhập mã tài sản (không bắt buộc)"
+                      />
+                      {activeField === "code" && (
+                        <AutocompleteSuggestions
+                          suggestions={filteredSuggestions}
+                          onSelect={handleSelectSuggestion}
+                          visible={showSuggestions}
+                          highlightedIndex={highlightedSuggestion}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="specifications">Quy cách, đặc điểm tài sản</label>
+                    <textarea
+                      id="specifications"
+                      name="specifications"
+                      value={formData.specifications || ""}
+                      onChange={handleChange}
+                      placeholder="Mô tả đặc điểm, quy cách của tài sản"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="year_of_use" className="required">Năm sử dụng</label>
+                    <input
+                      id="year_of_use"
+                      type="number"
+                      name="year_of_use"
+                      value={formData.year_of_use || ""}
+                      onChange={handleChange}
+                      className={errors.year_of_use ? 'input-error' : ''}
+                      min="1970"
+                      max={new Date().getFullYear() + 5}
                       required
                     />
-                    {activeField === "name" && (
-                      <AutocompleteSuggestions
-                        suggestions={filteredSuggestions}
-                        onSelect={handleSelectSuggestion}
-                        visible={showSuggestions}
-                        highlightedIndex={highlightedSuggestion}
-                      />
-                    )}
+                    {errors.year_of_use && <div className="error-message">{errors.year_of_use}</div>}
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="acquisition_source" className="required">Nguồn tài sản</label>
+                    <select
+                      id="acquisition_source"
+                      name="acquisition_source"
+                      onChange={handleSelect}
+                      value={formData.acquisition_source}
+                      required
+                    >
+                      <option value="Lẻ">Lẻ</option>
+                      <option value="DA">Dự án</option>
+                    </select>
                   </div>
                 </div>
               </div>
-              <div className="column">
-                <div className="info-container">
-                  <div className="info-header">Mã tài sản: </div>
-                  <div className="autocomplete-container">
+            </div>
+
+            {/* Section 1: Kế toán & Kiểm kê */}
+            <div className={`form-section ${currentSection === 1 ? 'visible' : 'hidden'}`}>
+              <div className="section-card">
+                <h3 className="section-card-title">Theo sổ kế toán</h3>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="quantity" className="required">Số lượng</label>
                     <input
-                      type="text"
-                      name="asset_code"
-                      value={formData.asset_code || ""}
-                      onChange={handleAssetCodeChange}
-                      onKeyDown={handleKeyDown}
-                      onFocus={() => {
-                        setCodeInputFocused(true);
-                        if (
-                          formData.asset_code &&
-                          getFilteredSuggestions(formData.asset_code, "code")
-                            .length > 0
-                        ) {
-                          setShowSuggestions(true);
-                          setActiveField("code");
-                        }
-                      }}
-                      onBlur={() => {
-                        setTimeout(() => {
-                          setCodeInputFocused(false);
-                          if (!nameInputFocused) {
-                            setShowSuggestions(false);
-                          }
-                        }, 200);
-                      }}
-                      className="autocomplete-input"
+                      id="quantity"
+                      type="number"
+                      name="quantity"
+                      value={formData.accounting?.quantity || 0}
+                      onChange={handleChange}
+                      className={errors.quantity ? 'input-error' : ''}
+                      min="0"
+                      required
                     />
-                    {activeField === "code" && (
-                      <AutocompleteSuggestions
-                        suggestions={filteredSuggestions}
-                        onSelect={handleSelectSuggestion}
-                        visible={showSuggestions}
-                        highlightedIndex={highlightedSuggestion}
+                    {errors.quantity && <div className="error-message">{errors.quantity}</div>}
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="unit_price" className="required">Đơn giá (VNĐ)</label>
+                    <input
+                      id="unit_price"
+                      type="text"
+                      name="unit_price"
+                      className={`input-price ${errors.unit_price ? 'input-error' : ''}`}
+                      value={
+                        formData.unit_price_formatted ||
+                        formatPrice(formData.accounting?.unit_price || 0)
+                      }
+                      onChange={handleChange}
+                      required
+                    />
+                    {errors.unit_price && <div className="error-message">{errors.unit_price}</div>}
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="origin_price">Nguyên giá (VNĐ)</label>
+                    <input
+                      id="origin_price"
+                      type="text"
+                      name="origin_price"
+                      className="input-price"
+                      value={
+                        formData.origin_price_formatted ||
+                        formatPrice(formData.accounting?.origin_price || 0)
+                      }
+                      disabled
+                    />
+                    <small className="helper-text">Tự động tính từ Số lượng × Đơn giá</small>
+                  </div>
+                </div>
+              </div>
+
+              <div className="section-card">
+                <h3 className="section-card-title">Kiểm kê thực tế</h3>
+                <div className="inventory-stats">
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="real_count">Số lượng thực tế</label>
+                      <input
+                        id="real_count"
+                        type="number"
+                        name="real_count"
+                        value={formData.quantity_differential?.real_count || 0}
+                        onChange={handleChange}
+                        min="0"
                       />
+                    </div>
+                  </div>
+
+                  <div className="inventory-difference">
+                    <div className="difference-item">
+                      <div className="difference-label">SL thừa:</div>
+                      <div className="difference-value surplus">
+                        {formData.quantity_differential?.surplus_quantity || 0}
+                      </div>
+                    </div>
+                    
+                    <div className="difference-item">
+                      <div className="difference-label">SL thiếu:</div>
+                      <div className="difference-value shortage">
+                        {formData.quantity_differential?.missing_quantity || 0}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 2: Khấu hao & Vị trí */}
+            <div className={`form-section ${currentSection === 2 ? 'visible' : 'hidden'}`}>
+              <div className="section-card">
+                <h3 className="section-card-title">Khấu hao</h3>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="depreciation_rate">Tỷ lệ hao mòn (%)</label>
+                    <input
+                      id="depreciation_rate"
+                      type="number"
+                      name="depreciation_rate"
+                      value={formData.depreciation_rate || 0}
+                      onChange={handleChange}
+                      min="0"
+                      max="100"
+                      step="0.1"
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="remaining_value">Giá trị còn lại (VNĐ)</label>
+                    <input
+                      id="remaining_value"
+                      type="text"
+                      name="remaining_value"
+                      className="input-price"
+                      value={
+                        formData.remaining_value_formatted ||
+                        formatPrice(formData.remaining_value || 0)
+                      }
+                      disabled
+                    />
+                    <small className="helper-text">Tự động tính từ Nguyên giá × (100% - Tỷ lệ hao mòn)</small>
+                  </div>
+                </div>
+                
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="suggested_disposal">Đề nghị thanh lý</label>
+                    <input
+                      id="suggested_disposal"
+                      type="text"
+                      name="suggested_disposal"
+                      value={formData.suggested_disposal || ""}
+                      onChange={handleChange}
+                      placeholder="Nhập đề nghị thanh lý (nếu có)"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="section-card">
+                <h3 className="section-card-title">Vị trí & Người phụ trách</h3>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="location">Địa chỉ phòng</label>
+                    <select
+                      id="location"
+                      name="location"
+                      onChange={handleSelect}
+                      value={getLocationId(formData.location)}
+                    >
+                      <option value="">-- Chọn địa chỉ phòng --</option>
+                      {roomList?.map((room) => (
+                        <option key={room._id} value={room._id}>
+                          {room.fullName} - {room.name}
+                        </option>
+                      ))}
+                    </select>
+                    {!getLocationId(formData.location) && (
+                      <small className="helper-text">
+                        <FaInfoCircle size={12} /> Nếu không chọn phòng, tài sản sẽ được đặt vào kho mặc định
+                      </small>
                     )}
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Row 2: Quy cách và năm sử dụng */}
-            <div className="two-column-row uneven">
-              <div className="column wide">
-                <div className="info-container">
-                  <div className="info-header">
-                    Quy cách, đặc điểm tài sản:{" "}
+                
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="responsible_user">Người chịu trách nhiệm</label>
+                    <select
+                      id="responsible_user"
+                      name="responsible_user"
+                      onChange={handleSelect}
+                      value={getUserId(formData.responsible_user)}
+                    >
+                      <option value="">-- Chọn người chịu trách nhiệm --</option>
+                      {userList?.map((user) => (
+                        <option key={user._id} value={user._id}>
+                          {user.name} {user.userid ? `(${user.userid})` : ''}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <textarea
-                    name="specifications"
-                    value={formData.specifications || ""}
-                    onChange={handleChange}
-                  />
                 </div>
-              </div>
-              <div className="column narrow">
-                <div className="info-container">
-                  <div className="info-header">
-                    Năm sử dụng: <span className="required">*</span>
+                
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="note">Ghi chú</label>
+                    <textarea
+                      id="note"
+                      name="note"
+                      value={formData.note || ""}
+                      onChange={handleChange}
+                      placeholder="Nhập ghi chú khác (nếu có)"
+                    />
                   </div>
-                  <input
-                    type="number"
-                    name="year_of_use"
-                    value={formData.year_of_use || ""}
-                    onChange={handleChange}
-                    required
-                  />
                 </div>
               </div>
             </div>
 
-            {/* ACCOUNTING SECTION */}
-            <div className="section-divider">
-              <h3 className="section-title">Theo sổ kế toán</h3>
-            </div>
-
-            <div className="normal-info accounting-section">
-              <div className="info-container">
-                <div className="info-header">
-                  Số lượng: <span className="required">*</span>
-                </div>
-                <input
-                  type="number"
-                  name="quantity"
-                  value={formData.accounting?.quantity || 0}
-                  onChange={handleChange}
-                  required
-                  min="0"
-                />
-              </div>
-
-              <div className="info-container">
-                <div className="info-header">
-                  Đơn giá (VNĐ): <span className="required">*</span>
-                </div>
-                <input
-                  type="text"
-                  name="unit_price"
-                  className="input-price"
-                  value={
-                    formData.unit_price_formatted ||
-                    formatPrice(formData.accounting?.unit_price || 0)
-                  }
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              <div className="info-container">
-                <div className="info-header">Nguyên giá (VNĐ):</div>
-                <input
-                  type="text"
-                  name="origin_price"
-                  className="input-price"
-                  value={
-                    formData.origin_price_formatted ||
-                    formatPrice(formData.accounting?.origin_price || 0)
-                  }
-                  disabled
-                />
-              </div>
-            </div>
-
-            {/* DIFFERENTIAL SECTION */}
-            <div className="section-divider">
-              <h3 className="section-title">Chênh lệch</h3>
-            </div>
-
-            <div className="normal-info differential-section">
-              <div className="info-container">
-                <div className="info-header">KK thực tế:</div>
-                <input
-                  type="number"
-                  name="real_count"
-                  value={formData.quantity_differential?.real_count || 0}
-                  onChange={handleChange}
-                  min="0"
-                />
-              </div>
-
-              <div className="info-container">
-                <div className="info-header">SL thừa:</div>
-                <input
-                  type="number"
-                  name="surplus_quantity"
-                  value={formData.quantity_differential?.surplus_quantity || 0}
-                  disabled
-                />
-              </div>
-
-              <div className="info-container">
-                <div className="info-header">SL thiếu:</div>
-                <input
-                  type="number"
-                  name="missing_quantity"
-                  value={formData.quantity_differential?.missing_quantity || 0}
-                  disabled
-                />
-              </div>
-            </div>
-
-            {/* DEPRECIATION SECTION */}
-            <div className="section-divider">
-              <h3 className="section-title">Khấu hao</h3>
-            </div>
-
-            <div className="normal-info depreciation-section">
-              <div className="info-container">
-                <div className="info-header">Tỷ lệ hao mòn (%):</div>
-                <input
-                  type="number"
-                  name="depreciation_rate"
-                  value={formData.depreciation_rate || 0}
-                  onChange={handleChange}
-                  min="0"
-                  max="100"
-                />
-              </div>
-
-              <div className="info-container">
-                <div className="info-header">Giá trị còn lại (VNĐ):</div>
-                <input
-                  type="text"
-                  name="remaining_value"
-                  className="input-price"
-                  value={
-                    formData.remaining_value_formatted ||
-                    formatPrice(formData.remaining_value || 0)
-                  }
-                  disabled
-                />
-              </div>
-
-              <div className="info-container">
-                <div className="info-header">Đề nghị thanh lý:</div>
-                <input
-                  type="text"
-                  name="suggested_disposal"
-                  value={formData.suggested_disposal || ""}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-
-            {/* OTHER INFORMATION SECTION */}
-            <div className="section-divider">
-              <h3 className="section-title">Thông tin khác</h3>
-            </div>
-
-            <div className="normal-info">
-              <div className="info-container">
-                <div className="info-header">
-                  Nguồn: <span className="required">*</span>
-                </div>
-                <select
-                  name="acquisition_source"
-                  onChange={handleSelect}
-                  value={formData.acquisition_source}
-                  required
+            <div className="form-navigation">
+              {currentSection > 0 && (
+                <button
+                  type="button"
+                  className="prev-section-btn"
+                  onClick={() => setCurrentSection(prev => prev - 1)}
+                  disabled={isSubmitting}
                 >
-                  <option value="Lẻ">Lẻ</option>
-                  <option value="DA">Dự án</option>
-                </select>
-              </div>
+                  Quay lại
+                </button>
+              )}
               
-              <div className="info-container">
-                <div className="info-header">Địa chỉ phòng: </div>
-                <select
-                  name="location"
-                  onChange={handleSelect}
-                  value={getLocationId(formData.location)}
+              {currentSection < formSections.length - 1 && (
+                <button
+                  type="button"
+                  className="next-section-btn"
+                  onClick={() => setCurrentSection(prev => prev + 1)}
+                  disabled={isSubmitting}
                 >
-                  <option value="">Chọn địa chỉ phòng</option>
-                  {roomList?.map((room) => (
-                    <option key={room._id} value={room._id}>
-                      {room.fullName} - {room.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="info-container">
-                <div className="info-header">Người chịu trách nhiệm: </div>
-                <select
-                  name="responsible_user"
-                  onChange={handleSelect}
-                  value={getUserId(formData.responsible_user)}
+                  Tiếp tục
+                </button>
+              )}
+              
+              {currentSection === formSections.length - 1 && (
+                <button
+                  type="button"
+                  className="submit-btn"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
                 >
-                  <option value="">Chọn người chịu trách nhiệm</option>
-                  {userList?.map((user) => (
-                    <option key={user._id} value={user._id}>
-                      {`${user.name} - ${user.userid || ""}`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Notes */}
-            <div className="long-info">
-              <div className="info-header">Ghi chú: </div>
-              <textarea
-                name="note"
-                value={formData.note || ""}
-                onChange={handleChange}
-              />
-            </div>
-
-            {/* Submit Button */}
-            <div className="button-container">
-              <button className="submit-btn" onClick={handleSubmit}>
-                Tạo tài sản
-              </button>
+                  {isSubmitting ? "Đang lưu..." : "Tạo tài sản"}
+                </button>
+              )}
             </div>
           </form>
         </div>

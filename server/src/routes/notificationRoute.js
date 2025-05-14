@@ -3,7 +3,7 @@ const notificationController = require('../Controller/notificationController');
 const middlewareController = require('../middleware/middleware');
 
 // Xác thực người dùng cho tất cả các routes
-router.use(middlewareController.verifyTokenAndAdminAuth);
+router.use(middlewareController.verifyToken);
 
 // Lấy thông báo của người dùng
 router.get('/', notificationController.getUserNotifications);

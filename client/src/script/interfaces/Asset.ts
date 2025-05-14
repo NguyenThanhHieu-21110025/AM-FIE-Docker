@@ -16,6 +16,13 @@ type PopulatedUser = {
   userid?: string;
 };
 
+// Định nghĩa loại tài sản
+export type AssetType = 
+  | "TAI SAN CO DINH TT HOP TAC DAO TAO QUOC TE" 
+  | "TAI SAN QUAN LY TT HOP TAC DAO TAO QUOC TE" 
+  | "TAI SAN TANG NAM" 
+  | "TAI SAN VNT CONG CU DUNG CU TT HOP TAC DAO TAO QUOC TE";
+
 // Interface chính cho Asset
 export interface Asset {
   // Thông tin cơ bản
@@ -50,6 +57,9 @@ export interface Asset {
   responsible_user?: string | PopulatedUser;
   note: string;
   
+  // Loại tài sản (thêm vào interface)
+  type: AssetType;
+  
   // Lịch sử kiểm kê
   history?: Array<{
     date: Date;
@@ -58,6 +68,7 @@ export interface Asset {
   }>;
   __v?: number;
   
+  // Các trường phụ trợ cho hiển thị
   unit_price_formatted?: string;
   origin_price_formatted?: string;
   remaining_value_formatted?: string;
@@ -91,6 +102,7 @@ export type AssetRequest = Omit<
   suggested_disposal?: string;
   note?: string;
 };
+
 
 const HANDLE_ASSET_URL = import.meta.env.VITE_API_URL + "/asset";
 

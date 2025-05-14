@@ -1,5 +1,8 @@
 export type Status = "Đang hoạt động" | "Dừng hoạt động";
-export type Role = "Người dùng" | "Admin";
+
+// Cập nhật enum Role để khớp với server
+export type ServerRole = "user" | "powerUser" | "admin";
+export type DisplayRole = "Người dùng" | "Người dùng nâng cao" | "Admin";
 
 export interface User {
   _id: string;
@@ -8,12 +11,14 @@ export interface User {
   email: string;
   phoneNumber: string;
   position: string;
-  isAdmin: boolean;
+  role: ServerRole; // Cập nhật type
   isActive: boolean;
-  createAt: string;
-  updateAt: string;
-  status: Status;
-  role: Role;
+  createdAt: string; 
+  updatedAt: string; 
+
+  // Trường status và displayRole tính toán từ isActive và role
+  status?: Status; // Optional vì được tính toán từ isActive
+  displayRole?: DisplayRole; // Optional vì được tính toán từ role
   __v: string;
 }
 
@@ -23,12 +28,12 @@ export interface CreateUserPayload {
   password: string;
   phoneNumber?: string;
   position?: string;
-  isAdmin?: boolean;
+  role?: ServerRole; // Cập nhật type
 }
 
 export interface ApiResponse<T> {
   message: string;
-  status: 'success' | 'error';
+  status: "success" | "error";
   data?: T;
   error?: string;
 }
@@ -40,46 +45,76 @@ export async function getUserList(accessToken: string) {
     headers: { token: `Bearer ${accessToken}` },
   });
   const data: User[] = await res.json();
-  console.log(data);
+
+  // Cập nhật cách mapping role và status
   data.forEach((item) => {
     item.status = item.isActive ? "Đang hoạt động" : "Dừng hoạt động";
-    item.role = item.isAdmin ? "Admin" : "Người dùng";
+
+    // Map role từ server sang hiển thị
+    switch (item.role) {
+      case "admin":
+        item.displayRole = "Admin";
+        break;
+      case "powerUser":
+        item.displayRole = "Người dùng nâng cao";
+        break;
+      default:
+        item.displayRole = "Người dùng";
+    }
   });
 
   return data;
 }
-
 export async function getUserById(id: string, accessToken: string) {
   const res = await fetch(`${HANDLE_USER_URL}/${id}`, {
     headers: { token: `Bearer ${accessToken}` },
   });
   const data = (await res.json()) as User;
+
+  // Cập nhật thông tin hiển thị
   data.status = data.isActive ? "Đang hoạt động" : "Dừng hoạt động";
-  data.role = data.isAdmin ? "Admin" : "Người dùng";
-  console.log(data);
+
+  // Map role từ server sang hiển thị
+  switch (data.role) {
+    case "admin":
+      data.displayRole = "Admin";
+      break;
+    case "powerUser":
+      data.displayRole = "Người dùng nâng cao";
+      break;
+    default:
+      data.displayRole = "Người dùng";
+  }
+
   return data;
 }
 
-export async function createUser(userData: CreateUserPayload, accessToken: string): Promise<ApiResponse<User>> {
+export async function createUser(
+  userData: CreateUserPayload,
+  accessToken: string
+): Promise<ApiResponse<User>> {
   try {
+    // Nếu không chỉ định role, sử dụng default từ server
+    const requestData = { ...userData };
+
     const response = await fetch(`${HANDLE_USER_URL}/create`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'token': `Bearer ${accessToken}`
+        "Content-Type": "application/json",
+        token: `Bearer ${accessToken}`,
       },
-      body: JSON.stringify(userData)
+      body: JSON.stringify(requestData),
     });
 
     const data = await response.json();
-    
+
     if (!response.ok) {
-      throw new Error(data.message || 'Có lỗi xảy ra khi tạo tài khoản');
+      throw new Error(data.message || "Có lỗi xảy ra khi tạo tài khoản");
     }
 
     return data;
   } catch (error) {
-    console.error('Create user error:', error);
+    console.error("Create user error:", error);
     throw error;
   }
 }
@@ -107,7 +142,7 @@ export async function updateUser(id: string, user: User, accessToken: string) {
 export async function deleteUser(
   id: string,
   accoundId: string,
-  isAdmin: boolean,
+  role: ServerRole,
   accessToken: string
 ) {
   try {
@@ -117,7 +152,7 @@ export async function deleteUser(
         "Content-Type": "application/json",
         token: `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ id: accoundId, admin: isAdmin }),
+      body: JSON.stringify({ id: accoundId, role: role }),
     };
     const res = await fetch(`${HANDLE_USER_URL}/${id}`, requestInit);
     const data = await res.json();
@@ -132,7 +167,7 @@ export async function deleteUser(
 export async function changeStatusUser(
   id: string,
   accoundId: string,
-  isAdmin: boolean,
+  role: ServerRole,
   accessToken: string
 ) {
   try {
@@ -142,7 +177,7 @@ export async function changeStatusUser(
         "Content-Type": "application/json",
         token: `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ id: accoundId, isAdmin: isAdmin }),
+      body: JSON.stringify({ id: accoundId, role: role }),
     };
     const res = await fetch(`${HANDLE_USER_URL}/active/${id}`, requestInit);
     const data = await res.json();

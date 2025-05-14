@@ -30,26 +30,16 @@ export interface NotificationRequest {
 // Constant cho API URL
 const NOTIFICATION_API_URL = import.meta.env.VITE_API_URL + '/notifications';
 
-/**
- * Lấy danh sách thông báo của người dùng
- */
 export async function getNotifications(token: string): Promise<Notification[]> {
-    try {
-      console.log('Calling API at:', NOTIFICATION_API_URL);
-      
+    try {      
       const res = await fetch(NOTIFICATION_API_URL, {
         headers: { token: `Bearer ${token}` },
       });
-      
-      // Kiểm tra response trước khi xử lý
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error(`API Error (${res.status}):`, errorText);
-        return [];
+        throw new Error('Lỗi khi lấy danh sách thông báo');
       }
       
       const data = await res.json();
-      console.log('API response data:', data);
       
       return Array.isArray(data) ? data : [];
     } catch (error) {

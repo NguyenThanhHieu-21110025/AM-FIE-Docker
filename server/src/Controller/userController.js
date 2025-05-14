@@ -39,8 +39,8 @@ const userController = {
     },
     createUser: async (req, res) => {
         try {
-            // Check if user is admin
-            if (!req.user || !req.user.isAdmin) {
+            // Check if user is admin - Sử dụng role thay vì isAdmin
+            if (!req.user || req.user.role !== 'admin') {
                 return res.status(403).json({
                     message: "Bạn không có quyền tạo tài khoản",
                     status: "error"
@@ -65,7 +65,7 @@ const userController = {
                 password: hashedPassword,
                 phoneNumber: req.body.phoneNumber || "",
                 position: req.body.position || "",
-                isAdmin: req.body.isAdmin || false,
+                role: req.body.role || 'user',
                 isActive: true
             });
 
@@ -106,24 +106,62 @@ const userController = {
         try {
             const user = await User.findById(req.params.id);
             user.isActive =!user.isActive;
-            res.status(200).json("Account has been updated");
+            await user.save();
+            
+            await createNotification({
+                message: `Trạng thái tài khoản "${user.name}" đã được thay đổi`,
+                type: 'user',
+                relatedItem: user._id,
+                itemModel: 'User'
+            });
+            
+            res.status(200).json({
+                message: "Cập nhật trạng thái tài khoản thành công",
+                status: "success"
+            });
         }catch(err){
-            res.status(500).json(err);
+            res.status(500).json({
+                message: "Có lỗi khi cập nhật trạng thái tài khoản",
+                status: "error",
+                error: err.message
+            });
         }
     },
     deleteUser: async ( req, res ) => {
         try {
+            // Chỉ admin mới được xóa tài khoản
+            if (!req.user || req.user.role !== 'admin') {
+                return res.status(403).json({
+                    message: "Bạn không có quyền xóa tài khoản",
+                    status: "error"
+                });
+            }
+            
             const user = await User.findByIdAndDelete(req.params.id);
+            if (!user) {
+                return res.status(404).json({
+                    message: "Không tìm thấy tài khoản",
+                    status: "error"
+                });
+            }
 
             await createNotification({
                 message: `Tài khoản "${user.name}" đã bị xóa khỏi hệ thống`,
                 type: 'user'
-              });
+            });
 
-            res.status(200).json("User has been deleted");
+            res.status(200).json({
+                message: "Xóa tài khoản thành công",
+                status: "success"
+            });
         }catch (err) {
-            res.status(500).json(err);
-    }},
+            res.status(500).json({
+                message: "Có lỗi khi xóa tài khoản",
+                status: "error",
+                error: err.message
+            });
+        }
+    },
     requestPasswordReset: async (req, res) => {
         try {
             const { email } = req.body;

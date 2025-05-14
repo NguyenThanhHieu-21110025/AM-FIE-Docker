@@ -25,7 +25,6 @@ export async function getRoomList(token: string, userList: User[]) {
     headers: { token: `Bearer ${token}` },
   });
   const data: Room[] = await res.json();
-  console.log("Room data from API:", data); // Let's see what's coming from the API
   
   data.forEach((room) => {
     // Handle both populated and non-populated responsible_user
@@ -59,7 +58,6 @@ export async function getRoomById(id: string, token: string) {
     data.responsible_user_name = responsible_user.name;
   }
   
-  console.log(data);
   return data;
 }
 
@@ -73,11 +71,9 @@ export async function createRoom(room: RoomRequest, token: string) {
       },
       body: JSON.stringify(room),
     };
-    console.log(requestInit.body);
 
     const res = await fetch(`${HANDLE_ROOM_URL}`, requestInit);
     const data = await res.json();
-    console.log(data);
     return res.ok;
   } catch (error) {
     console.log(error);
@@ -99,11 +95,9 @@ export async function updateRoom(
       },
       body: JSON.stringify(room),
     };
-    console.log(requestInit.body);
 
     const res = await fetch(`${HANDLE_ROOM_URL}/${id}`, requestInit);
     const data = await res.json();
-    console.log(data);
     return res.ok;
   } catch (error) {
     console.log(error);

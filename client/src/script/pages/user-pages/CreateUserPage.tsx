@@ -1,6 +1,6 @@
 import "../../../css/InfoPage.css";
 import { useMainRef, useScrollToMain } from "../../context/MainRefContext";
-import { createUser, CreateUserPayload } from "../../interfaces/User";
+import { createUser, CreateUserPayload, ServerRole } from "../../interfaces/User";
 import { useAuth } from "../../context/AuthContext";
 import { FaAngleLeft } from "react-icons/fa";
 import { useState } from "react";
@@ -14,7 +14,7 @@ const CreateUserPage = () => {
     password: "",
     phoneNumber: "",
     position: "",
-    isAdmin: false,
+    role: "user", // Thay thế isAdmin bằng role mặc định "user"
   });
   const [loading, setLoading] = useState(false);
   const { refreshAccessToken, accessToken } = useAuth();
@@ -26,10 +26,19 @@ const CreateUserPage = () => {
   useScrollToMain();
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: value
+    }));
+  }
+  
+  // Thêm hàm xử lý cho select element
+  function handleSelectChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
     }));
   }
 
@@ -37,48 +46,48 @@ const CreateUserPage = () => {
     e.preventDefault();
     
     // Validation
-  if (!formData.name || !formData.email || !formData.password) {
-    showToast("Vui lòng điền đầy đủ thông tin bắt buộc", "warning");
-    return;
-  }
+    if (!formData.name || !formData.email || !formData.password) {
+      showToast("Vui lòng điền đầy đủ thông tin bắt buộc", "warning");
+      return;
+    }
 
-  // Validate email format
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(formData.email)) {
-    showToast("Email không hợp lệ", "warning");
-    return;
-  }
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      showToast("Email không hợp lệ", "warning");
+      return;
+    }
 
-  // Validate password length
-  if (formData.password.length < 6) {
-    showToast("Mật khẩu phải có ít nhất 6 ký tự", "warning");
-    return;
-  }
+    // Validate password length
+    if (formData.password.length < 6) {
+      showToast("Mật khẩu phải có ít nhất 6 ký tự", "warning");
+      return;
+    }
 
     setLoading(true);
     try {
-    let token = accessToken;
-    if (!token) {
-      token = await refreshAccessToken();
-      if (!token) throw new Error("Phiên đăng nhập hết hạn");
-    }
+      let token = accessToken;
+      if (!token) {
+        token = await refreshAccessToken();
+        if (!token) throw new Error("Phiên đăng nhập hết hạn");
+      }
 
-    const result = await createUser(formData, token);
-    
-    if (result.status === 'success') {
-      showToast("Tạo tài khoản thành công", "success");
-      navigate('/user-dashboard');
-    } else {
-      showToast(result.message || "Có lỗi xảy ra khi tạo tài khoản", "error");
+      const result = await createUser(formData, token);
+      
+      if (result.status === 'success') {
+        showToast("Tạo tài khoản thành công", "success");
+        navigate('/user-dashboard');
+      } else {
+        showToast(result.message || "Có lỗi xảy ra khi tạo tài khoản", "error");
+      }
+    } catch (error: any) {
+      showToast(
+        error.response?.data?.message || error.message || "Có lỗi xảy ra", 
+        "error"
+      );
+    } finally {
+      setLoading(false);
     }
-  } catch (error: any) {
-    showToast(
-      error.response?.data?.message || error.message || "Có lỗi xảy ra", 
-      "error"
-    );
-  } finally {
-    setLoading(false);
-  }
   }
 
   return (
@@ -136,7 +145,7 @@ const CreateUserPage = () => {
                 <input
                   type="tel"
                   name="phoneNumber"
-                  value={formData.phoneNumber}
+                  value={formData.phoneNumber || ""}
                   onChange={handleChange}
                   placeholder="Nhập số điện thoại"
                   pattern="(84|0[3|5|7|8|9])+([0-9]{8})\b"
@@ -147,19 +156,24 @@ const CreateUserPage = () => {
                 <input
                   type="text"
                   name="position"
-                  value={formData.position}
+                  value={formData.position || ""}
                   onChange={handleChange}
                   placeholder="Nhập chức vụ"
                 />
               </div>
-              <div className="info-container checkbox">
-                <div className="info-header">Quyền admin:</div>
-                <input
-                  type="checkbox"
-                  name="admin"
-                  checked={formData.isAdmin}
-                  onChange={handleChange}
-                />
+              {/* Thay checkbox bằng select cho role */}
+              <div className="info-container">
+                <div className="info-header">Quyền người dùng:</div>
+                <select
+                  name="role"
+                  value={formData.role || "user"}
+                  onChange={handleSelectChange}
+                  className="role-select"
+                >
+                  <option value="user">Người dùng</option>
+                  <option value="powerUser">Người dùng nâng cao</option>
+                  <option value="admin">Admin</option>
+                </select>
               </div>
             </div>
             <div className="button-container">

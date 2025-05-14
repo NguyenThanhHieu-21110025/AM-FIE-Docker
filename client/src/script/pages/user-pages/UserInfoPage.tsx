@@ -9,6 +9,8 @@ import {
   getUserById,
   updateUser,
   User,
+  ServerRole,
+  DisplayRole
 } from "../../interfaces/User";
 import Loader from "../../components/Loader";
 import { useAuth } from "../../context/AuthContext";
@@ -18,10 +20,11 @@ import { useToast } from "../../hooks/useToast";
 const UserInfoPage = () => {
   const [formData, setFormData] = useState<User>({} as User);
   const [mode, setMode] = useState<"info" | "update">("info");
-  const { refreshAccessToken, accessToken, _id: accountId, isAdmin } = useAuth();
+  const { refreshAccessToken, accessToken, _id: accountId, role } = useAuth();
   const location = useLocation();
   const id = location.pathname.split("/").pop() as string;
   const isMyAccount = id === accountId;
+  const isAdmin = role === "admin"; // Xác định isAdmin dựa vào role mới
   const ICON_SIZE = 20;
   const { showToast } = useToast();
 
@@ -58,6 +61,11 @@ const UserInfoPage = () => {
     const { name } = e.target;
     const value =
       e.target.type === "number" ? Number(e.target.value) : e.target.value;
+    setFormData((prevState) => ({ ...prevState, [name]: value }));
+  }
+  
+  function handleSelectChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const { name, value } = e.target;
     setFormData((prevState) => ({ ...prevState, [name]: value }));
   }
 
@@ -125,7 +133,7 @@ const UserInfoPage = () => {
       const result = await deleteUser(
         id,
         accountId as string,
-        isAdmin as boolean,
+        role as ServerRole, 
         token
       );
       
@@ -153,20 +161,43 @@ const UserInfoPage = () => {
       | React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) {
     e.preventDefault();
-    let token = accessToken;
-    if (!token) {
-      token = await refreshAccessToken();
-      if (!token) {
-        throw new Error("Unable to refresh access token");
-      }
+    
+    const newStatus = formData.isActive ? "vô hiệu hóa" : "kích hoạt";
+    
+    // Confirm status change
+    if (!confirm(`Bạn có chắc chắn muốn ${newStatus} tài khoản này không?`)) {
+      return;
     }
-    const result = await changeStatusUser(
-      id,
-      accountId as string,
-      isAdmin as boolean,
-      token
-    );
-    if (result) window.location.reload();
+    
+    try {
+      let token = accessToken;
+      if (!token) {
+        token = await refreshAccessToken();
+        if (!token) {
+          showToast("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại", "error");
+          return;
+        }
+      }
+      
+      const result = await changeStatusUser(
+        id,
+        accountId as string,
+        role as ServerRole, 
+        token
+      );
+      
+      if (result) {
+        showToast(`Đã ${newStatus} tài khoản thành công`, "success");
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        showToast(`Không thể ${newStatus} tài khoản`, "error");
+      }
+    } catch (error: any) {
+      showToast(
+        `Lỗi: ${error.response?.data?.message || error.message || "Không xác định"}`, 
+        "error"
+      );
+    }
   }
 
   const InfoMode = (): ReactNode => {
@@ -192,6 +223,11 @@ const UserInfoPage = () => {
           <div className="info-container">
             <div className="info-header">Chức vụ:</div>
             <p>{formData.position || "Không có"}</p>
+          </div>
+          {/* Thêm hiển thị quyền người dùng */}
+          <div className="info-container">
+            <div className="info-header">Quyền:</div>
+            <p>{formData.displayRole || "Người dùng"}</p>
           </div>
           <div className="info-container">
             <div className="info-header">Trạng thái:</div>
@@ -274,13 +310,29 @@ const UserInfoPage = () => {
               onChange={handleChange}
             />
           </div>
+          {/* Thêm dropdown để quản lý quyền người dùng */}
+          {isAdmin && !isMyAccount && (
+            <div className="info-container">
+              <div className="info-header">Quyền:</div>
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleSelectChange}
+                className="role-select"
+              >
+                <option value="user">Người dùng</option>
+                <option value="powerUser">Người dùng nâng cao</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+          )}
           <div className="info-container">
             <div className="info-header">Trạng thái:</div>
             <input
               type="text"
-              name="role"
-              value={formData.status}
-              onChange={handleChange}
+              name="status"
+              value={formData.status || ""}
+              className="read-only"
               readOnly
             />
           </div>

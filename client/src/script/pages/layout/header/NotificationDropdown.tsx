@@ -43,14 +43,7 @@ const NotificationDropdown: React.FC = () => {
         }
       }
 
-      // Log để debug
-      console.log(
-        "Fetching notifications with token:",
-        token.substring(0, 15) + "..."
-      );
-
       const notificationData = await getNotifications(token);
-      console.log("Fetched notifications:", notificationData);
       setNotifications(notificationData);
     } catch (error) {
       console.error("Error fetching notifications:", error);

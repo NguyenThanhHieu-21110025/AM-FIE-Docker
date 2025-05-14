@@ -12,7 +12,7 @@ interface Props {
 const Navbar = (props: Props) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { role } = useAuth();
 
   const showNavbar =
     location.pathname !== "/" &&
@@ -59,7 +59,7 @@ const Navbar = (props: Props) => {
               <FaLocationDot size={ICON_SIZE} />
               <p>Phòng</p>
             </li>
-            {isAdmin && (
+            {role === "admin" && (
               <li
                 className={
                   location.pathname.startsWith("/user-dashboard")

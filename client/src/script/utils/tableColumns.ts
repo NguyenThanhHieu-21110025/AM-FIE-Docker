@@ -148,9 +148,9 @@ export const userTableColumns: Column[] = [
     footer: "Thông tin công việc",
     columns: [
       { 
-        header: "Loại tài khoản", 
-        accessorKey: "role", 
-        footer: "Loại tài khoản" 
+        header: "Quyền hạn", 
+        accessorKey: "displayRole", 
+        footer: "Quyền hạn" 
       },
       {
         header: "Chức vụ",

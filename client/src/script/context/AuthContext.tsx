@@ -26,7 +26,7 @@ interface AuthContextType {
   accessToken: string | null;
   _id: string | null;
   email: string | null;
-  isAdmin: boolean | null;
+  role: string | null;  // Thay 'admin' thành 'role'
   loading: boolean;
   login: (user: LoginUser) => Promise<boolean>;
   logout: () => Promise<void>;
@@ -47,7 +47,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [role, setRole] = useState<string | null>(null);  // Thay 'admin' thành 'role'
   const [_id, set_id] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -67,7 +67,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const payload = getPayload(accessToken);  // Giải mã token
         setAccessToken(accessToken);             // Lưu access token vào state
         setEmail(payload.email);                 // Lưu email
-        setIsAdmin(payload.isAdmin);                   // Lưu role
+        setRole(payload.role);                   // Lưu role
         set_id(payload.id);                      // Lưu id người dùng
         localStorage.setItem("accessToken", accessToken); // Lưu vào localStorage
         return accessToken;
@@ -91,12 +91,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         },
         body: JSON.stringify(user),
       });
-      const data = await response.json();
-      if (response.ok) {
-        setAccessToken(data.accessToken);
-        setEmail(data.email);
-        setIsAdmin(data.isAdmin);
-        set_id(data.userid);
+      const data = await res.json();
+      if (res.ok) {
+        const { accessToken, email, role, userid } = data;  // Lấy role thay vì admin
+        setAccessToken(accessToken);
+        setEmail(email);
+        setRole(role);  // Lưu role vào state
+        set_id(userid);
+        localStorage.setItem("accessToken", accessToken); // Lưu vào localStorage
         return true;
       }
       return false;
@@ -109,7 +111,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Đăng ký
   const register = async (user: RegisterUser): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_URL}/register`, {
+      const res = await fetch(`${API_URL}/register`, {
         method: "POST",
         credentials: "include",
         headers: {
@@ -117,12 +119,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         },
         body: JSON.stringify(user),
       });
-      const data = await response.json();
-      if (response.ok) {
-        setAccessToken(data.accessToken);
-        setEmail(data.email);
-        setIsAdmin(data.isAdmin);
-        set_id(data.userid);
+      const data = await res.json();
+      if (res.ok) {
+        const { accessToken, email, role, userid } = data;  // Lấy role thay vì admin
+        setAccessToken(accessToken);
+        setEmail(email);
+        setRole(role);  // Lưu role vào state
+        set_id(userid);
+        localStorage.setItem("accessToken", accessToken); // Lưu vào localStorage
         return true;
       }
       return false;
@@ -144,7 +148,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setAccessToken(null);
       setEmail(null);
-      setIsAdmin(null);  // Xóa role khi logout
+      setRole(null);  // Xóa role khi logout
       set_id(null);
       localStorage.removeItem("accessToken");  // Xóa token khỏi localStorage khi logout
     }
@@ -158,45 +162,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (!token) {
           token = await refreshAccessToken();
         }
-        if (token) {
-          const isExpired = checkTokenExpiration(token);
-          if (isExpired) {
-            token = await refreshAccessToken();
-          }
-          if (token) {
-            try {
-              const {
-                email: emailToken,
-                isAdmin: adminToken,
-                id,
-              } = getPayload(token);
-              set_id(id);
-              setEmail(emailToken);
-              setIsAdmin(adminToken);
-              return;
-            } catch (decodeError) {
-              console.error("Failed to decode token:", decodeError);
-              set_id(null);
-              setEmail(null);
-              setIsAdmin(null);
-            }
-          }
-          set_id(null);
-          setEmail(null);
-          setIsAdmin(null);
-          return;
+        if (token && !checkTokenExpiration(token)) {
+          const payload = getPayload(token);
+          setAccessToken(token);
+          setEmail(payload.email);
+          setRole(payload.role);  // Lưu role từ token vào state
+          set_id(payload.id);
+        } else {
+          await refreshAccessToken();
         }
-        set_id(null);
-        setEmail(null);
-        setIsAdmin(null);
-        return;
-      } catch (error) {
-        console.error("Failed to initialize authentication:", error);
-        set_id(null);
-        setEmail(null);
-        setIsAdmin(null);
-      }
-      finally {
+      } catch (err) {
+        console.error("Init auth failed:", err);
+      } finally {
         setLoading(false);
       }
     };
@@ -209,8 +186,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         accessToken,
         _id,
         email,
-        isAdmin,
-        _id: _id,
+        role,  // Cung cấp role thay vì admin
         loading,
         login,
         logout,

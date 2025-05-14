@@ -1,6 +1,7 @@
 const Assets = require("../models/assetModel");
 const Room = require("../models/roomModel");
-const { createNotification } = require("./notificationController");
+const User = require("../models/userModel");
+const { createAssetNotification, createNotification } = require("./notificationController");
 
 // Hàm cập nhật thông tin tổng hợp của phòng
 async function updateRoomSummary(roomId) {
@@ -116,6 +117,7 @@ const assetController = {
         location: req.body.location,
         responsible_user: req.body.responsible_user,
         note: req.body.note,
+        type: req.body.type,
       });
 
       // Nếu có location (phòng), cập nhật phòng: thêm tài sản vào danh sách và cập nhật số liệu
@@ -131,18 +133,14 @@ const assetController = {
 
       if (req.body.location) {
         const room = await Room.findById(req.body.location).select('fullName');
-        await createNotification({
+        await createAssetNotification({
           message: `Tài sản mới "${req.body.asset_name}" đã được thêm vào ${room?.fullName || 'hệ thống'}`,
-          type: 'asset',
-          relatedItem: asset._id,
-          itemModel: 'Asset'
+          assetId: asset._id 
         });
       } else {
-        await createNotification({
+        await createAssetNotification({
           message: `Tài sản mới "${req.body.asset_name}" đã được thêm vào hệ thống`,
-          type: 'asset',
-          relatedItem: asset._id,
-          itemModel: 'Asset'
+          assetId: asset._id 
         });
       }
 
@@ -194,6 +192,7 @@ const assetController = {
             location: req.body.location,
             responsible_user: req.body.responsible_user,
             note: req.body.note,
+            type: req.body.type,
           },
         },
         { new: true, runValidators: true }
@@ -223,11 +222,9 @@ const assetController = {
         await updateRoomSummary(oldLocation);
       }
 
-      await createNotification({
+      await createAssetNotification({
         message: `Tài sản "${updatedAsset.asset_name}" đã được cập nhật`,
-        type: 'asset',
-        relatedItem: updatedAsset._id,
-        itemModel: 'Asset'
+        assetId: updatedAsset._id,
       });
 
       res.status(200).json(updatedAsset);
@@ -242,13 +239,16 @@ const assetController = {
 
   deleteAsset: async (req, res) => {
     try {
+      // Logic xử lý xóa tài sản không thay đổi...
       const asset = await Assets.findById(req.params.id);
       if (!asset) {
         return res.status(404).json("Asset not found");
       }
 
-      // Lưu lại location để cập nhật phòng sau khi xóa tài sản
+      // Lưu lại location và thông tin cần thiết trước khi xóa
       const locationId = asset.location ? asset.location.toString() : null;
+      const assetName = asset.asset_name; // Lưu tên tài sản để dùng trong thông báo
+      const responsibleUserId = asset.responsible_user; // Lưu ID người quản lý
 
       // Xóa tài sản
       await asset.deleteOne();
@@ -264,9 +264,20 @@ const assetController = {
         await updateRoomSummary(locationId);
       }
       
+      // Tìm người quản lý tài sản (nếu là powerUser) trước khi gửi thông báo
+      let additionalRecipients = [];
+      if (responsibleUserId) {
+        const responsibleUser = await User.findById(responsibleUserId);
+        if (responsibleUser && responsibleUser.role === 'powerUser') {
+          additionalRecipients.push(responsibleUser._id);
+        }
+      }
+      
+      // Đối với xóa tài sản, vẫn sử dụng createNotification vì assetId không còn tồn tại
       await createNotification({
-        message: `Tài sản "${asset.asset_name}" đã bị xóa khỏi hệ thống`,
-        type: 'asset'
+        message: `Tài sản "${assetName}" đã bị xóa khỏi hệ thống`,
+        type: 'asset',
+        additionalRecipients // Thêm người quản lý tài sản (nếu là powerUser) vào danh sách nhận thông báo
       });
       
       res.status(200).json("Asset has been deleted");
