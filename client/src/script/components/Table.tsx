@@ -8,7 +8,7 @@ import {
   getSortedRowModel,
   getFilteredRowModel,
 } from "@tanstack/react-table";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   FaSort,
   FaSortDown,
@@ -25,6 +25,7 @@ import { Room } from "../interfaces/Room";
 import Modal from "./Modal";
 import { useAuth } from "../context/AuthContext";
 
+
 interface Props {
   data: any[];
   columns: Column[];
@@ -33,6 +34,8 @@ interface Props {
   onRoomSelect?: (roomId: string) => void;
   showExportButton?: boolean;
   exportEndpoint?: string;
+  multiple?: boolean;
+
 }
 
 const Table = ({
@@ -49,13 +52,27 @@ const Table = ({
   const [showRoomModal, setShowRoomModal] = useState(false);
   const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
   const [roomSearch, setRoomSearch] = useState("");
+  const [types, setTypes] = useState<string[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [isExporting, setIsExporting] = useState(false);
+  const [showExportPopup, setShowExportPopup] = useState(false); // điều khiển hiển thị popup
   const location = useLocation();
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const navigate = useNavigate();
   const { refreshAccessToken, accessToken } = useAuth();
 
   const isAssetDashboard = location.pathname === "/asset-dashboard";
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL}/export/export/types`)
+      .then(res => res.json())
+      .then(data => {
+        setTypes(data.types); //mảng types
+      })
+      .catch(error => {
+        console.error("Failed to load export types", error);
+      });
+  }, []);
 
   const table = useReactTable({
     data,
@@ -76,6 +93,11 @@ const Table = ({
 
   // Handle Excel export
   const handleExportExcel = async () => {
+    if (selectedTypes.length === 0) {
+      alert("Vui lòng chọn ít nhất một loại dữ liệu để xuất");
+      return;
+    }
+
     try {
       setIsExporting(true);
       let token = accessToken;
@@ -86,28 +108,38 @@ const Table = ({
         }
       }
 
-      // Call the export endpoint
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}${exportEndpoint}`,
-        {
+      let response: Response;
+
+      if (selectedTypes.length === 1) {
+        response = await fetch(
+          `${import.meta.env.VITE_API_URL}/export/export/${selectedTypes[0]}`,
+          {
+            headers: {
+              token: `Bearer ${token}`,
+            },
+          }
+        );
+      } else {
+        response = await fetch(`${import.meta.env.VITE_API_URL}/export/export/multiple`, {
+          method: "POST",
           headers: {
+            "Content-Type": "application/json",
             token: `Bearer ${token}`,
           },
-        }
-      );
+          body: JSON.stringify({ types: selectedTypes }),
+        });
+      }
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to export data");
+        throw new Error(errorData.message || "Xuất dữ liệu thất bại");
       }
 
-      // Create blob from response and download it
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.style.display = "none";
       a.href = url;
-      // Get current date for filename
       const date = new Date().toISOString().split("T")[0];
       a.download = `export-${date}.xlsx`;
       document.body.appendChild(a);
@@ -115,14 +147,12 @@ const Table = ({
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Export failed:", error);
-      alert(
-        "Xuất dữ liệu thất bại: " +
-          (error instanceof Error ? error.message : "Unknown error")
-      );
+      alert("Xuất dữ liệu thất bại: " + (error instanceof Error ? error.message : "Unknown error"));
     } finally {
       setIsExporting(false);
     }
   };
+
 
   const handleRoomSelection = (roomId: string) => {
     setSelectedRooms((prev) => {
@@ -187,16 +217,74 @@ const Table = ({
               </button>
             )}
 
-            {showExportButton && (
-              <button
-                className="export-btn"
-                onClick={handleExportExcel}
-                disabled={isExporting}
-              >
-                <FaFileExcel size={16} />
-                <span>{isExporting ? "Đang xuất..." : "Xuất Excel"}</span>
-              </button>
-            )}
+            <div className="table-container">
+              {showExportButton && (
+                <div style={{ position: "relative" }}>
+                  <button
+                    className="export-btn"
+                    onClick={() => {
+                      console.log("Clicked Export button");
+                      setShowExportPopup(true); //set show popup to true
+                    }}
+                    disabled={isExporting}
+                  >
+                    <FaFileExcel size={16} />
+                    <span>{isExporting ? "Đang xuất..." : "Xuất Excel"}</span>
+                  </button>
+
+                  {showExportPopup && (
+                    <div className="export-popup">
+                      <div className="popup-content">
+                        <h4>Chọn loại dữ liệu để xuất</h4>
+                        <div className="checkbox-group">
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={selectedTypes.length === types.length}
+                              onChange={(e) => {
+                                setSelectedTypes(e.target.checked ? types : []);
+                              }}
+                            />
+                            Chọn tất cả
+                          </label>
+                          {types.map((type) => (
+                            <label key={type}>
+                              <input
+                                type="checkbox"
+                                value={type}
+                                checked={selectedTypes.includes(type)}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  setSelectedTypes((prev) =>
+                                    prev.includes(value)
+                                      ? prev.filter((t) => t !== value)
+                                      : [...prev, value]
+                                  );
+                                }}
+                              />
+                              {type}
+                            </label>
+                          ))}
+                        </div>
+                        <div className="popup-actions">
+                          <button
+                            onClick={() => {
+                              handleExportExcel();
+                              setShowExportPopup(false);
+                            }}
+                            disabled={selectedTypes.length === 0}
+                          >
+                            Xác nhận xuất
+                          </button>
+                          <button onClick={() => setShowExportPopup(false)}>Hủy</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
 
             <div
               onClick={() => navigate(`${baseURL}/create`)}
@@ -237,8 +325,8 @@ const Table = ({
                                 desc: <FaSortDown className="icon" />,
                                 false: <FaSort className="icon" />,
                               }[
-                                (header.column.getIsSorted() as string) ??
-                                  "false"
+                              (header.column.getIsSorted() as string) ??
+                              "false"
                               ]}
                           </span>
                         </div>
@@ -316,9 +404,8 @@ const Table = ({
             return (
               <button
                 key={buttonIndex}
-                className={`pagination-btn ${
-                  pageIndex === buttonIndex ? "active-page" : ""
-                }`}
+                className={`pagination-btn ${pageIndex === buttonIndex ? "active-page" : ""
+                  }`}
                 onClick={() => table.setPageIndex(buttonIndex)}
               >
                 {buttonIndex + 1}
