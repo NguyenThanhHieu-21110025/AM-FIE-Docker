@@ -1,4 +1,4 @@
-import "../../../css/InfoPage.css";
+import "../../../css/assetPage/CreateAsset.css";
 import { useState, useEffect } from "react";
 import {
   Asset,
@@ -502,7 +502,7 @@ const CreateAssetPage = () => {
   );
 
   return (
-    <main ref={mainRef} className="info-page">
+    <main ref={mainRef} className="create-asset-page">
       <div className="container">
         <div className="layout">
           <div className="header-actions">

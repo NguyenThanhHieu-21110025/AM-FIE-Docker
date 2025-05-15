@@ -1,6 +1,3 @@
-import { User } from './User';
-
-// Các loại thông báo
 export type NotificationType = 'asset' | 'room' | 'user' | 'system';
 
 // Interface chính cho Notification
