@@ -87,4 +87,4 @@ const importAssets = async (req, res) => {
   }
 };
 
-module.exports = importAssets;
+module.exports = importRouter;

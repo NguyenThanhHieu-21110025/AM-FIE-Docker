@@ -1,10 +1,12 @@
-const importRouter = require("../Controller/importDB.Controller");
-const multer = require("multer"); 
+const express = require("express");
+const router = express.Router();
+const multer = require("multer");
+const importAssets = require("../Controller/importDB.Controller");
+
+// Cấu hình multer để lưu file tạm thời vào thư mục 'uploads/'
 const upload = multer({ dest: 'uploads/' });
 
-const router = require("express").Router();
-
-
-router.post("/import", upload.single("file"), importRouter.importFile);
+// Route import Excel
+router.post("/import", upload.single("file"), importAssets);
 
 module.exports = router;
