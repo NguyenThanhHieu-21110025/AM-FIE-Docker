@@ -5,15 +5,11 @@ import {
   AssetRequest,
   AssetType,
   deleteAsset,
-  getAssetById,
   updateAsset,
 } from "../../interfaces/Asset";
 import { useMainRef, useScrollToMain } from "../../context/MainRefContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { getUserList, User } from "../../interfaces/User";
-import { Room, getRoomList } from "../../interfaces/Room";
-import { useQuery } from "@tanstack/react-query";
 import {
   FaAngleLeft,
   FaCheckCircle,
@@ -23,51 +19,30 @@ import {
   FaTimes,
   FaInfoCircle,
   FaClipboardList,
-  FaCalculator,
   FaMoneyBillWave,
-  FaUserAlt,
-  FaStickyNote,
-  FaExclamationTriangle,
-  FaRegWindowClose,
 } from "react-icons/fa";
 import Loader from "../../components/Loader";
 import { convertToNumber, formatPrice } from "../../utils/formatPrice";
 import { useToast } from "../../hooks/useToast";
-
-// Định nghĩa các loại tài sản với mã màu tương ứng (giống như trong trang Create)
-const ASSET_TYPES = [
-  {
-    value: "TAI SAN CO DINH TT HOP TAC DAO TAO QUOC TE",
-    label: "Tài sản cố định",
-    color: "#4f46e5", // indigo
-    icon: "📊",
-  },
-  {
-    value: "TAI SAN QUAN LY TT HOP TAC DAO TAO QUOC TE",
-    label: "Tài sản công cụ quản lý",
-    color: "#0891b2", // cyan
-    icon: "🔧",
-  },
-  {
-    value: "TAI SAN TANG NAM",
-    label: "Tài sản tăng năm",
-    color: "#059669", // emerald
-    icon: "📈",
-  },
-  {
-    value: "TAI SAN VNT CONG CU DUNG CU TT HOP TAC DAO TAO QUOC TE",
-    label: "Tài sản vật nội thất, công cụ dụng cụ",
-    color: "#d97706", // amber
-    icon: "🪑",
-  },
-];
+import { useUserList, useRoomList, useAssetDetail } from "../../hooks/useAsset";
+import {
+  ASSET_TYPES,
+  ASSET_FORM_SECTIONS,
+  getAssetTypeInfo,
+} from "../../constants/assetConstants";
+import {
+  calculateRemainingValue,
+  calculateQuantityDifference,
+  calculateOriginPrice,
+} from "../../utils/assetCalculations";
 
 const AssetInfoPage = () => {
   const [formData, setFormData] = useState<Asset>({} as Asset);
   const [mode, setMode] = useState<"info" | "update">("info");
   const [currentSection, setCurrentSection] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { refreshAccessToken, accessToken } = useAuth();
+  const { accessToken } = useAuth();
+  const location = useLocation();
   const id = location.pathname.split("/").pop() as string;
   const ICON_SIZE = 18;
   const { showToast } = useToast();
@@ -76,83 +51,49 @@ const AssetInfoPage = () => {
   const mainRef = useMainRef();
   useScrollToMain();
 
-  // Các section của form (giống CreateAssetPage)
-  const formSections = [
-    { title: "Thông tin chung", icon: <FaInfoCircle /> },
-    { title: "Kế toán & Kiểm kê", icon: <FaClipboardList /> },
-    { title: "Khấu hao & Vị trí", icon: <FaMoneyBillWave /> },
-  ];
+  // Sử dụng các custom hooks thay vì gọi API trực tiếp
+  const { data: assetData, isLoading: isLoadingAsset } = useAssetDetail(id);
+  const { data: userList, isLoading: isLoadingUserList } = useUserList();
+  const { data: roomList, isLoading: isLoadingRoomList } =
+    useRoomList(userList);
 
-  // Tìm loại tài sản theo giá trị
-  const getAssetTypeInfo = (typeValue?: string) => {
-    return (
-      ASSET_TYPES.find((type) => type.value === typeValue) || ASSET_TYPES[0]
-    );
-  };
+  // Sử dụng hằng số từ assetConstants.ts thay vì định nghĩa trực tiếp
+  const formSections = ASSET_FORM_SECTIONS.map((section) => ({
+    ...section,
+    icon:
+      section.icon === "📋" ? (
+        <FaInfoCircle />
+      ) : section.icon === "💰" ? (
+        <FaClipboardList />
+      ) : (
+        <FaMoneyBillWave />
+      ),
+  }));
 
-  // Lấy thông tin về loại tài sản hiện tại
+  // Lấy thông tin về loại tài sản hiện tại từ hàm helper trong assetConstants
   const currentAssetType = getAssetTypeInfo(formData.type);
-
-  const { data, isLoading: isLoadingAsset } = useQuery<Asset>({
-    queryFn: async () => {
-      let token = accessToken;
-      if (!token) {
-        token = await refreshAccessToken();
-        if (!token) {
-          throw new Error("Unable to refresh access token");
-        }
-      }
-      return getAssetById(id, token);
-    },
-    queryKey: ["asset", id],
-  });
-
-  const { data: userList, isLoading: isLoadingUserList } = useQuery({
-    queryFn: async () => {
-      let token = accessToken;
-      if (!token) {
-        token = await refreshAccessToken();
-        if (!token) {
-          throw new Error("Unable to refresh access token");
-        }
-      }
-      return getUserList(token);
-    },
-    queryKey: ["userList"],
-  });
-
-  const { data: roomList, isLoading: isLoadingRoomList } = useQuery({
-    queryFn: async () => {
-      let token = accessToken;
-      if (!token) {
-        token = await refreshAccessToken();
-        if (!token) {
-          throw new Error("Unable to refresh access token");
-        }
-      }
-      return getRoomList(token, userList as User[]);
-    },
-    queryKey: ["roomList", userList],
-    enabled: !!userList && userList.length > 0,
-  });
-
   useEffect(() => {
-    if (data) {
-      setFormData(data);
+    if (assetData) {
+      setFormData(assetData);
     }
-  }, [data]);
+  }, [assetData]);
 
   // Calculate remaining value whenever depreciation rate or origin price changes
   useEffect(() => {
     if (mode === "update") {
       const originPrice = formData.accounting?.origin_price || 0;
       const depreciationRate = formData.depreciation_rate || 0;
-      const remainingValue = originPrice * (1 - depreciationRate / 100);
+
+      // Sử dụng hàm utility từ assetCalculations.ts
+      const { value, formatted } = calculateRemainingValue(
+        originPrice,
+        depreciationRate
+      );
 
       setFormData((prev) => ({
         ...prev,
-        remaining_value: remainingValue,
-        remaining_value_formatted: formatPrice(remainingValue),
+        remaining_value: value,
+        remaining_value_formatted: formatted,
       }));
     }
   }, [formData.depreciation_rate, formData.accounting?.origin_price, mode]);
@@ -187,17 +128,21 @@ const AssetInfoPage = () => {
 
       switch (name) {
         case "unit_price":
+          const quantity = formData.accounting?.quantity || 0;
+
+          // Sử dụng hàm utility để tính nguyên giá
+          const { value: originPrice, formatted: originPriceFormatted } =
+            calculateOriginPrice(numericPrice, quantity);
+
           setFormData((prev) => ({
             ...prev,
             accounting: {
               ...prev.accounting,
               unit_price: numericPrice,
-              origin_price: numericPrice * (prev.accounting?.quantity || 0),
+              origin_price: originPrice,
             },
             unit_price_formatted: formatPrice(numericPrice),
-            origin_price_formatted: formatPrice(
-              numericPrice * (prev.accounting?.quantity || 0)
-            ),
+            origin_price_formatted: originPriceFormatted,
           }));
           break;
 
@@ -217,22 +162,22 @@ const AssetInfoPage = () => {
       const quantity = Number(value);
       const realCount = formData.quantity_differential?.real_count || 0;
 
-      // Calculate surplus/missing quantities
-      let surplusQuantity = 0;
-      let missingQuantity = 0;
+      // Sử dụng hàm utility để tính chênh lệch số lượng
+      const { surplusQuantity, missingQuantity } = calculateQuantityDifference(
+        quantity,
+        realCount
+      );
 
-      if (realCount > quantity) {
-        surplusQuantity = realCount - quantity;
-      } else if (quantity > realCount) {
-        missingQuantity = quantity - realCount;
-      }
+      // Sử dụng hàm utility để tính nguyên giá
+      const { value: originPrice, formatted: originPriceFormatted } =
+        calculateOriginPrice(formData.accounting?.unit_price || 0, quantity);
 
       setFormData((prev) => ({
         ...prev,
         accounting: {
           ...prev.accounting,
           quantity,
-          origin_price: (prev.accounting?.unit_price || 0) * quantity,
+          origin_price: originPrice,
         },
         quantity_differential: {
           ...prev.quantity_differential,
@@ -240,9 +185,7 @@ const AssetInfoPage = () => {
           surplus_quantity: surplusQuantity,
           missing_quantity: missingQuantity,
         },
-        origin_price_formatted: formatPrice(
-          (prev.accounting?.unit_price || 0) * quantity
-        ),
+        origin_price_formatted: originPriceFormatted,
       }));
       return;
     }
@@ -251,16 +194,11 @@ const AssetInfoPage = () => {
       const real_count = Number(value);
       const quantity = formData.accounting?.quantity || 0;
 
-      let surplusQuantity = 0;
-      let missingQuantity = 0;
-
-      if (real_count > quantity) {
-        surplusQuantity = real_count - quantity;
-        missingQuantity = 0;
-      } else if (quantity > real_count) {
-        surplusQuantity = 0;
-        missingQuantity = quantity - real_count;
-      }
+      // Sử dụng hàm utility để tính chênh lệch số lượng
+      const { surplusQuantity, missingQuantity } = calculateQuantityDifference(
+        quantity,
+        real_count
+      );
 
       setFormData((prev) => ({
         ...prev,
@@ -299,7 +237,6 @@ const AssetInfoPage = () => {
       setErrors((prev) => ({ ...prev, type: "" }));
     }
   };
-
   function handleSelect(e: React.ChangeEvent<HTMLSelectElement>) {
     const { name, value } = e.target;
 
@@ -308,36 +245,46 @@ const AssetInfoPage = () => {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
 
-    if (name === "type") {
-      setFormData((prev) => ({
-        ...prev,
-        type: value as AssetType,
-      }));
-    } else if (name === "responsible_user") {
-      if (typeof userList === "undefined") return;
-      const { name, _id } = userList.find(
-        (user) => user._id === e.target.value
-      ) as User;
-      setFormData((prevState) => ({
-        ...prevState,
-        responsible_user: _id,
-        responsible_user_name: name,
-      }));
-    } else if (name === "location") {
-      if (typeof roomList === "undefined") return;
-      const { fullName, _id } = roomList.find(
-        (room) => room._id === e.target.value
-      ) as Room;
-      setFormData((prevState) => ({
-        ...prevState,
-        location: _id,
-        location_code: fullName,
-      }));
-    } else if (name === "acquisition_source") {
-      setFormData((prev) => ({
-        ...prev,
-        acquisition_source: value as "Lẻ" | "DA",
-      }));
+    switch (name) {
+      case "type":
+        setFormData((prev) => ({
+          ...prev,
+          type: value as AssetType,
+        }));
+        break;
+
+      case "responsible_user":
+        if (!userList) return;
+
+        const selectedUser = userList.find((user) => user._id === value);
+        if (!selectedUser) return;
+
+        setFormData((prev) => ({
+          ...prev,
+          responsible_user: selectedUser._id,
+          responsible_user_name: selectedUser.name,
+        }));
+        break;
+
+      case "location":
+        if (!roomList) return;
+
+        const selectedRoom = roomList.find((room) => room._id === value);
+        if (!selectedRoom) return;
+
+        setFormData((prev) => ({
+          ...prev,
+          location: selectedRoom._id,
+          location_code: selectedRoom.fullName,
+        }));
+        break;
+
+      case "acquisition_source":
+        setFormData((prev) => ({
+          ...prev,
+          acquisition_source: value as "Lẻ" | "DA",
+        }));
+        break;
     }
   }
 
@@ -372,7 +319,6 @@ const AssetInfoPage = () => {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   async function handleSubmit(
     e: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) {
@@ -384,13 +330,9 @@ const AssetInfoPage = () => {
     }
 
     try {
-      let token = accessToken;
-      if (!token) {
-        token = await refreshAccessToken();
-        if (!token) {
-          showToast("Không thể xác thực. Vui lòng đăng nhập lại.", "error");
-          return;
-        }
+      if (!accessToken) {
+        showToast("Không thể xác thực. Vui lòng đăng nhập lại.", "error");
+        return;
       }
 
       // Remove formatted and computed fields that we don't want to send to the server
@@ -406,20 +348,24 @@ const AssetInfoPage = () => {
         ...filteredData
       } = formData;
 
-      // Đảm bảo origin_price luôn được tính chính xác
-      filteredData.accounting.origin_price =
-        filteredData.accounting.quantity * filteredData.accounting.unit_price;
+      // Đảm bảo origin_price luôn được tính chính xác sử dụng utility function
+      const { value: originPrice } = calculateOriginPrice(
+        filteredData.accounting.unit_price,
+        filteredData.accounting.quantity
+      );
+
+      filteredData.accounting.origin_price = originPrice;
 
       // Đảm bảo location và responsible_user là string ID
       const assetRequest: AssetRequest = {
         ...filteredData,
-        type: filteredData.type, // Đảm bảo type được gửi đi
+        type: filteredData.type,
         location: getLocationId(filteredData.location),
         responsible_user: getUserId(filteredData.responsible_user),
       };
 
       // Gọi API để cập nhật tài sản
-      const success = await updateAsset(id, assetRequest, token);
+      const success = await updateAsset(id, assetRequest, accessToken);
 
       if (success) {
         showToast("Cập nhật tài sản thành công", "success");
@@ -452,15 +398,12 @@ const AssetInfoPage = () => {
     }
 
     try {
-      let token = accessToken;
-      if (!token) {
-        token = await refreshAccessToken();
-        if (!token) {
-          showToast("Không thể xác thực. Vui lòng đăng nhập lại.", "error");
-          return;
-        }
+      if (!accessToken) {
+        showToast("Không thể xác thực. Vui lòng đăng nhập lại.", "error");
+        return;
       }
-      const result = await deleteAsset(id, token);
+
+      const result = await deleteAsset(id, accessToken);
       if (result) {
         showToast("Xóa tài sản thành công", "success");
         navigate("/asset-dashboard");
@@ -491,7 +434,6 @@ const AssetInfoPage = () => {
       ))}
     </div>
   );
-
   const UpdateMode = (): ReactNode => {
     return (
       <form className="info-body">
@@ -512,13 +454,13 @@ const AssetInfoPage = () => {
             </span>
           </h1>
           <div className="action-buttons">
-            <button className="update-btn" onClick={() => setMode("update")}>
-              <FaPencilAlt size={16} />
-              <span>Chỉnh sửa</span>
+            <button className="submit-btn" onClick={handleSubmit}>
+              <FaSave size={16} />
+              <span>Lưu</span>
             </button>
-            <button className="delete-btn" onClick={handleDelete}>
-              <FaTrashAlt size={16} />
-              <span>Xóa</span>
+            <button className="cancel-btn" onClick={() => setMode("info")}>
+              <FaTimes size={16} />
+              <span>Hủy</span>
             </button>
           </div>
         </div>
@@ -1120,13 +1062,20 @@ const AssetInfoPage = () => {
               </div>
 
               <div className="form-group">
+                {" "}
                 <label>Người chịu trách nhiệm</label>
                 <div className="info-display">
                   {formData.responsible_user_name
-                    ? `${formData.responsible_user_name} - ${
+                    ? `${formData.responsible_user_name} ${
                         userList?.find(
                           (user) => user._id === formData.responsible_user
-                        )?.userid || ""
+                        )?.userid
+                          ? `(${
+                              userList.find(
+                                (user) => user._id === formData.responsible_user
+                              )?.userid
+                            })`
+                          : ""
                       }`
                     : "Không có"}
                 </div>

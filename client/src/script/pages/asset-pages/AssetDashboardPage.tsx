@@ -1,95 +1,40 @@
 import "../../../css/DashboardPage.css";
-import { getAssetList } from "../../interfaces/Asset";
-import { useQuery } from "@tanstack/react-query";
 import { useMainRef, useScrollToMain } from "../../context/MainRefContext";
 import Table from "../../components/Table";
 import { assetTableColumns } from "../../utils/tableColumns";
 import Loader from "../../components/Loader";
-import { useAuth } from "../../context/AuthContext";
-import { getUserList, User } from "../../interfaces/User";
-import { Room, getRoomList } from "../../interfaces/Room";
 import { useState } from "react";
-import { useToast } from "../../hooks/useToast";
+import { useUserList, useRoomList, useAssetList } from "../../hooks/useAsset";
 
+/**
+ * Trang Dashboard hiển thị danh sách tài sản
+ */
 const AssetDashboardPage = () => {
   const mainRef = useMainRef();
-  const { refreshAccessToken, accessToken } = useAuth();
   const [selectedRoom, setSelectedRoom] = useState<string>("");
-  const { showToast } = useToast();
   useScrollToMain();
 
-  const { data: userList, isLoading: isLoadingUser } = useQuery({
-    queryFn: async () => {
-      try {
-        let token = accessToken;
-        if (!token) {
-          token = await refreshAccessToken();
-          if (!token) {
-            throw new Error("Unable to refresh access token");
-          }
-        }
-        return getUserList(token);
-      } catch (error) {
-        showToast("Không thể tải danh sách người dùng", "error");
-        throw error;
-      }
-    },
-    queryKey: ["userList"],
-  });
+  // Sử dụng custom hooks để lấy dữ liệu
+  const { data: userList, isLoading: isLoadingUser } = useUserList();
+  const { data: roomList, isLoading: isLoadingRoom } = useRoomList(userList);
+  const { data: assetList, isLoading: isLoadingAsset } = useAssetList(userList, roomList);
 
-  const { data: roomList, isLoading: isLoadingRoom } = useQuery({
-    queryFn: async () => {
-      try {
-        let token = accessToken;
-        if (!token) {
-          token = await refreshAccessToken();
-          if (!token) {
-            throw new Error("Unable to refresh access token");
-          }
-        }
-        return getRoomList(token, userList as User[]);
-      } catch (error) {
-        showToast("Không thể tải danh sách phòng", "error");
-        throw error;
-      }
-    },
-    queryKey: ["roomList", userList],
-    enabled: !!userList && userList.length > 0,
-  });
-
-  const { data: assetList, isLoading: isLoadingAsset } = useQuery({
-    queryFn: async () => {
-      try {
-        let token = accessToken;
-        if (!token) {
-          token = await refreshAccessToken();
-          if (!token) {
-            throw new Error("Unable to refresh access token");
-          }
-        }
-        return getAssetList(token, userList as User[], roomList as Room[]);
-      } catch (error) {
-        showToast("Không thể tải danh sách tài sản", "error");
-        throw error;
-      }
-    },
-    queryKey: ["assetList", roomList],
-    enabled: !!roomList && roomList.length > 0,
-  });
-
+  // Lọc tài sản theo phòng được chọn
   const filteredAssets = assetList?.filter(asset => {
-    if (!selectedRoom) return true; // Show all assets when no room is selected
+    if (!selectedRoom) return true; // Hiển thị tất cả tài sản khi không có phòng nào được chọn
     
     const selectedRoomIds = selectedRoom ? selectedRoom.split(",") : [];
     
-    // Handle both object and string types
+    // Xử lý cả kiểu đối tượng và chuỗi
     const locationId = typeof asset.location === 'object' 
       ? asset.location?._id ?? '' 
       : asset.location ?? '';
       
-    // Show asset if its location matches any of the selected rooms
+    // Hiển thị tài sản nếu vị trí của nó khớp với bất kỳ phòng nào được chọn
     return selectedRoomIds.includes(locationId);
   });
+
+  const isLoading = isLoadingAsset || isLoadingRoom || isLoadingUser || typeof assetList === "undefined";
 
   return (
     <main className="dashboard-page" ref={mainRef}>
@@ -99,10 +44,7 @@ const AssetDashboardPage = () => {
         </div>
       </div>
 
-      {isLoadingAsset ||
-      isLoadingRoom ||
-      isLoadingUser ||
-      typeof assetList === "undefined" ? (
+      {isLoading ? (
         <Loader />
       ) : (
         <Table

@@ -1,55 +1,38 @@
 import "../../../css/assetPage/CreateAsset.css";
 import { useState, useEffect } from "react";
-import {
-  Asset,
-  AssetRequest,
+import { useNavigate } from "react-router-dom";
+import { 
+  Asset, 
   AssetType,
-  createAsset,
+  AssetRequest,
   getLocationId,
   getUserId,
+  createAsset
 } from "../../interfaces/Asset";
+import { formatPrice, convertToNumber } from "../../utils/formatPrice";
 import { useMainRef, useScrollToMain } from "../../context/MainRefContext";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { getUserList, User } from "../../interfaces/User";
-import { Room, getRoomList } from "../../interfaces/Room";
-import { useQuery } from "@tanstack/react-query";
-import { FaAngleLeft, FaSave, FaTimes, FaInfoCircle } from "react-icons/fa";
-import Loader from "../../components/Loader";
-import { convertToNumber, formatPrice } from "../../utils/formatPrice";
-import { useAssetSuggestions } from "../../hooks/useAssetSuggestions";
-import AutocompleteSuggestions from "../../components/AutocompleteSuggestions";
 import { useToast } from "../../hooks/useToast";
+import { useUserList, useRoomList, useAssetSuggestions } from "../../hooks/useAsset";
+import { FaAngleLeft, FaSave, FaTimes, FaInfoCircle } from "react-icons/fa";
+import AutocompleteSuggestions from "../../components/AutocompleteSuggestions";
+import Loader from "../../components/Loader";
+import { 
+  ASSET_TYPES, 
+  DEFAULT_ASSET_TYPE, 
+  DEFAULT_ACQUISITION_SOURCE, 
+  ASSET_FORM_SECTIONS as formSections
+} from "../../constants/assetConstants";
+import { calculateRemainingValue } from "../../utils/assetCalculations";
 
+/**
+ * Interface cho gợi ý tên tài sản
+ */
 interface AssetSuggestion {
   name: string;
   code: string;
   _id?: string;
 }
-
-// Định nghĩa các loại tài sản với mã màu tương ứng
-const ASSET_TYPES = [
-  {
-    value: "TAI SAN CO DINH TT HOP TAC DAO TAO QUOC TE",
-    label: "Tài sản cố định",
-    color: "#4f46e5", // indigo
-  },
-  {
-    value: "TAI SAN QUAN LY TT HOP TAC DAO TAO QUOC TE",
-    label: "Tài sản công cụ quản lý",
-    color: "#0891b2", // cyan
-  },
-  {
-    value: "TAI SAN TANG NAM",
-    label: "Tài sản tăng năm",
-    color: "#059669", // emerald
-  },
-  {
-    value: "TAI SAN VNT CONG CU DUNG CU TT HOP TAC DAO TAO QUOC TE",
-    label: "Tài sản vật nội thất, công cụ dụng cụ",
-    color: "#d97706", // amber
-  },
-];
 
 const CreateAssetPage = () => {
   const initialFormData: Asset = {
@@ -70,9 +53,9 @@ const CreateAssetPage = () => {
     depreciation_rate: 0,
     remaining_value: 0,
     suggested_disposal: "",
-    acquisition_source: "Lẻ",
+    acquisition_source: DEFAULT_ACQUISITION_SOURCE,
     note: "",
-    type: "TAI SAN CO DINH TT HOP TAC DAO TAO QUOC TE", // Giá trị mặc định
+    type: DEFAULT_ASSET_TYPE,
   } as Asset;
 
   const [formData, setFormData] = useState<Asset>(initialFormData);
@@ -91,48 +74,22 @@ const CreateAssetPage = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { showToast } = useToast();
 
-  useScrollToMain();
-
-  // Các section của form
-  const formSections = [
-    { title: "Thông tin chung", icon: "📋" },
-    { title: "Kế toán & Kiểm kê", icon: "💰" },
-    { title: "Khấu hao & Vị trí", icon: "📍" }
-  ];
-
-  // Auto-calculate remaining value based on depreciation rate
+  useScrollToMain();  // Auto-calculate remaining value based on depreciation rate
   useEffect(() => {
     const originPrice = formData.accounting?.origin_price || 0;
     const depreciationRate = formData.depreciation_rate || 0;
-    const remainingValue = originPrice * (1 - depreciationRate / 100);
+    const { value, formatted } = calculateRemainingValue(originPrice, depreciationRate);
 
     setFormData((prev) => ({
       ...prev,
-      remaining_value: remainingValue,
-      remaining_value_formatted: formatPrice(remainingValue),
+      remaining_value: value,
+      remaining_value_formatted: formatted,
     }));
   }, [formData.depreciation_rate, formData.accounting?.origin_price]);
 
-  // Fetch user list
-  const { data: userList, isLoading: isLoadingUserList } = useQuery({
-    queryFn: async () => {
-      const token = (await refreshAccessToken()) || accessToken;
-      if (!token) throw new Error("Unable to refresh access token");
-      return getUserList(token);
-    },
-    queryKey: ["userList"],
-  });
-
-  // Fetch room list
-  const { data: roomList, isLoading: isLoadingRoomList } = useQuery({
-    queryFn: async () => {
-      const token = (await refreshAccessToken()) || accessToken;
-      if (!token) throw new Error("Unable to refresh access token");
-      return getRoomList(token, userList as User[]);
-    },
-    queryKey: ["roomList", userList],
-    enabled: !!userList && userList.length > 0,
-  });
+  // Sử dụng custom hooks để lấy dữ liệu
+  const { data: userList, isLoading: isLoadingUserList } = useUserList();
+  const { data: roomList, isLoading: isLoadingRoomList } = useRoomList(userList);
 
   // Handle input changes for regular inputs and textareas
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {

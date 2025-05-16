@@ -132,12 +132,15 @@
 }
 
 
-.asset-info-page .cancel-btn {
-  background-color: var(--color-text-tertiary);
+.asset-info-page .cancel-btn,
+.asset-info-page .action-buttons .cancel-btn {
+  background-color: #f97316 !important; /* orange-500 - màu cam nổi bật */
+  color: white !important;
 }
 
-.asset-info-page .cancel-btn:hover {
-  background-color: #4b5563;
+.asset-info-page .cancel-btn:hover,
+.asset-info-page .action-buttons .cancel-btn:hover {
+  background-color: #ea580c !important; /* orange-600 - màu cam đậm hơn khi hover */
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -475,6 +478,48 @@
 .dark .asset-info-page .info-display {
   background-color: #17171d; /* slate-850 */
   border-color: #3f3f46; /* zinc-700 */
+}
+
+.dark .asset-info-page .submit-btn {
+  background-color: var(--color-success); /* giữ màu success */
+  color: white;
+}
+
+.dark .asset-info-page .submit-btn:hover {
+  background-color: #059669; /* emerald-600 - màu đậm hơn */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.dark .asset-info-page .update-btn {
+  background-color: var(--color-primary); /* giữ màu primary */
+  color: white;
+}
+
+.dark .asset-info-page .update-btn:hover {
+  background-color: #4338ca; /* indigo-700 - màu đậm hơn */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.dark .asset-info-page .delete-btn {
+  background-color: var(--color-danger); /* giữ màu danger */
+  color: white;
+}
+
+.dark .asset-info-page .delete-btn:hover {
+  background-color: #dc2626; /* red-600 - màu đậm hơn */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.dark .asset-info-page .cancel-btn,
+.dark .asset-info-page .action-buttons .cancel-btn {
+  background-color: #f97316 !important; /* orange-500 - giữ màu cam để nhất quán với light mode */
+  color: white !important;
+}
+
+.dark .asset-info-page .cancel-btn:hover,
+.dark .asset-info-page .action-buttons .cancel-btn:hover {
+  background-color: #ea580c !important; /* orange-600 - đậm hơn khi hover */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important; /* shadow đậm hơn cho dark mode */
 }
 
 .dark .asset-info-page input,
