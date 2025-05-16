@@ -148,7 +148,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setAccessToken(null);
       setEmail(null);
-      setRole(null);  // Xóa role khi logout
+      setRole(null); 
       set_id(null);
       localStorage.removeItem("accessToken");  // Xóa token khỏi localStorage khi logout
     }

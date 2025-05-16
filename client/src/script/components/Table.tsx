@@ -25,7 +25,6 @@ import { Room } from "../interfaces/Room";
 import Modal from "./Modal";
 import { useAuth } from "../context/AuthContext";
 
-
 interface Props {
   data: any[];
   columns: Column[];
@@ -35,7 +34,6 @@ interface Props {
   showExportButton?: boolean;
   exportEndpoint?: string;
   multiple?: boolean;
-
 }
 
 const Table = ({
@@ -65,11 +63,11 @@ const Table = ({
 
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_URL}/export/export/types`)
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         setTypes(data.types); //mảng types
       })
-      .catch(error => {
+      .catch((error) => {
         console.error("Failed to load export types", error);
       });
   }, []);
@@ -120,14 +118,17 @@ const Table = ({
           }
         );
       } else {
-        response = await fetch(`${import.meta.env.VITE_API_URL}/export/export/multiple`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            token: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ types: selectedTypes }),
-        });
+        response = await fetch(
+          `${import.meta.env.VITE_API_URL}/export/export/multiple`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              token: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ types: selectedTypes }),
+          }
+        );
       }
 
       if (!response.ok) {
@@ -147,12 +148,14 @@ const Table = ({
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Export failed:", error);
-      alert("Xuất dữ liệu thất bại: " + (error instanceof Error ? error.message : "Unknown error"));
+      alert(
+        "Xuất dữ liệu thất bại: " +
+          (error instanceof Error ? error.message : "Unknown error")
+      );
     } finally {
       setIsExporting(false);
     }
   };
-
 
   const handleRoomSelection = (roomId: string) => {
     setSelectedRooms((prev) => {
@@ -276,7 +279,9 @@ const Table = ({
                           >
                             Xác nhận xuất
                           </button>
-                          <button onClick={() => setShowExportPopup(false)}>Hủy</button>
+                          <button onClick={() => setShowExportPopup(false)}>
+                            Hủy
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -284,7 +289,6 @@ const Table = ({
                 </div>
               )}
             </div>
-
 
             <div
               onClick={() => navigate(`${baseURL}/create`)}
@@ -325,8 +329,8 @@ const Table = ({
                                 desc: <FaSortDown className="icon" />,
                                 false: <FaSort className="icon" />,
                               }[
-                              (header.column.getIsSorted() as string) ??
-                              "false"
+                                (header.column.getIsSorted() as string) ??
+                                  "false"
                               ]}
                           </span>
                         </div>
@@ -339,29 +343,35 @@ const Table = ({
 
             {/* Table Body */}
             <tbody>
-              {table.getRowModel().rows.map((row, rowIndex) => (
-                <tr key={row.id}>
-                  {row.getVisibleCells().map((cell, index) =>
-                    index === 0 ? (
-                      <td key={cell.id}>
-                        <Link to={`${baseURL}/${data[rowIndex]._id}`}>
+              {" "}
+              {table.getRowModel().rows.map((row) => {
+                // Lấy dữ liệu cho hàng hiện tại thông qua row.original
+                const rowData = row.original as any;
+
+                return (
+                  <tr key={row.id}>
+                    {row.getVisibleCells().map((cell, index) =>
+                      index === 0 ? (
+                        <td key={cell.id}>
+                          <Link to={`${baseURL}/${rowData._id}`}>
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </Link>
+                        </td>
+                      ) : (
+                        <td key={cell.id}>
                           {flexRender(
                             cell.column.columnDef.cell,
                             cell.getContext()
                           )}
-                        </Link>
-                      </td>
-                    ) : (
-                      <td key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </td>
-                    )
-                  )}
-                </tr>
-              ))}
+                        </td>
+                      )
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
 
             {/* Table Footer */}
@@ -404,8 +414,9 @@ const Table = ({
             return (
               <button
                 key={buttonIndex}
-                className={`pagination-btn ${pageIndex === buttonIndex ? "active-page" : ""
-                  }`}
+                className={`pagination-btn ${
+                  pageIndex === buttonIndex ? "active-page" : ""
+                }`}
                 onClick={() => table.setPageIndex(buttonIndex)}
               >
                 {buttonIndex + 1}
