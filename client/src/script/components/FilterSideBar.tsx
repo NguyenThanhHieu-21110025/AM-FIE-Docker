@@ -1,5 +1,5 @@
 import { Table } from "@tanstack/react-table";
-import { BsFilterLeft, BsChevronLeft, BsChevronRight } from "react-icons/bs";
+import { BsFilterLeft, BsChevronLeft, BsChevronRight, BsCheckLg, BsEye, BsEyeSlash } from "react-icons/bs";
 import { useState } from "react";
 import "../../css/FilterSidebar.css";
 import { Column } from "../utils/tableColumns";
@@ -30,6 +30,8 @@ export const FilterSidebar = ({ table, columns }: FilterSidebarProps) => {
   }, {} as Record<string, string>);
   
   const [isOpen, setIsOpen] = useState(false);
+  const visibleColumnCount = table.getAllLeafColumns().filter(col => col.getIsVisible()).length;
+  const totalColumnCount = table.getAllLeafColumns().length;
 
   const toggleAllColumns = (value: boolean) => {
     table.toggleAllColumnsVisible(value);
@@ -57,17 +59,29 @@ export const FilterSidebar = ({ table, columns }: FilterSidebarProps) => {
 
   return (
     <>
-      {isOpen && <div className="backdrop" onClick={() => setIsOpen(false)} />}
+      {isOpen && <div className="sidebar-backdrop" onClick={() => setIsOpen(false)} />}
 
       <div className={`sidebar-container ${isOpen ? "open" : ""}`}>
-        <button onClick={() => setIsOpen(!isOpen)} className="sidebar-toggle">
-          {isOpen ? <BsChevronRight /> : <BsChevronLeft />}
+        <button 
+          onClick={() => setIsOpen(!isOpen)} 
+          className="sidebar-toggle"
+          title={isOpen ? "Đóng bộ lọc" : "Mở bộ lọc"}
+        >
+          <div className="toggle-icon">
+            {isOpen ? <BsChevronRight /> : <BsChevronLeft />}
+          </div>
+          <div className="toggle-label">
+            <BsFilterLeft />
+            <span className="column-count">
+              {visibleColumnCount}/{totalColumnCount}
+            </span>
+          </div>
         </button>
 
         <div className="sidebar-content">
           <div className="sidebar-header">
-            <BsFilterLeft className="text-xl" />
-            <h2 className="sidebar-title">Chọn Cột</h2>
+            <BsFilterLeft className="filter-icon" />
+            <h2 className="sidebar-title">Hiển thị cột</h2>
           </div>
 
           <div className="sidebar-actions">
@@ -75,26 +89,34 @@ export const FilterSidebar = ({ table, columns }: FilterSidebarProps) => {
               onClick={() => toggleAllColumns(true)}
               className="sidebar-button sidebar-button-primary"
             >
-              Chọn tất cả
+              <BsEye />
+              <span>Hiển thị tất cả</span>
             </button>
             <button
               onClick={() => toggleAllColumns(false)}
               className="sidebar-button sidebar-button-secondary"
             >
-              Bỏ chọn tất cả
+              <BsEyeSlash />
+              <span>Ẩn tất cả</span>
             </button>
           </div>
 
           <div className="column-list">
             {table.getAllLeafColumns().map((column) => (
-              <div key={column.id} className="column-item">
+              <div 
+                key={column.id} 
+                className={`column-item ${column.getIsVisible() ? 'visible' : ''}`}
+              >
                 <label className="column-label">
                   <input
                     type="checkbox"
                     checked={column.getIsVisible()}
                     onChange={column.getToggleVisibilityHandler()}
                   />
-                  <span>
+                  <span className="checkbox-custom">
+                    {column.getIsVisible() && <BsCheckLg className="check-icon" />}
+                  </span>
+                  <span className="column-name">
                     {getColumnDisplayName(column)}
                   </span>
                 </label>
