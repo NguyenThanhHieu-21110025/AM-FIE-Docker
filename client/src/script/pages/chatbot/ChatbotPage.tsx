@@ -8,7 +8,7 @@ import { Chat, ChatSession } from "../../interfaces/Chat";
 import ChatbotService, { formatChat } from "../../services/chatService";
 
 const ChatbotPage: React.FC = () => {
-  const { refreshAccessToken, accessToken, _id } = useAuth(); 
+  const { refreshAccessToken, accessToken, _id } = useAuth();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
@@ -16,15 +16,25 @@ const ChatbotPage: React.FC = () => {
 
   const userId = _id;
   const chatboxRef = useRef<HTMLDivElement>(null);
-
-  // Khởi tạo với một session mặc định hoặc tải từ storage
+  // Tải danh sách sessions khi accessToken và userId có sẵn
   useEffect(() => {
-    if (!isInitialized && userId) {
+    if (userId && accessToken) {
+      console.log("UserId and accessToken available, loading sessions");
+      console.log("Current accessToken:", accessToken ? "exists" : "missing");
       loadSessions();
       setIsInitialized(true);
+    } else if (userId && !accessToken) {
+      console.log("UserId available but accessToken missing, waiting for token");
     }
-  }, [isInitialized, userId]);
-
+  }, [userId, accessToken]);
+  
+  // Tải lại sessions khi accessToken thay đổi (ví dụ: sau khi refreshed)
+  useEffect(() => {
+    if (userId && accessToken && isInitialized) {
+      console.log("Access token changed, reloading sessions");
+      loadSessions();
+    }
+  }, [accessToken]);
   // Auto-scroll khi có tin nhắn mới
   useEffect(() => {
     if (chatboxRef.current) {
@@ -32,37 +42,86 @@ const ChatbotPage: React.FC = () => {
     }
   }, [sessions, activeSessionId]);
 
-  // Tải danh sách sessions
+  // Effect để xử lý khi activeSessionId thay đổi
+  useEffect(() => {
+    // Đảm bảo UI cập nhật khi chuyển từ welcome sang chat
+    if (activeSessionId) {
+      const timer = setTimeout(() => {
+        if (chatboxRef.current) {
+          chatboxRef.current.scrollTop = chatboxRef.current.scrollHeight;
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [activeSessionId]); 
+    // Tải danh sách sessions
   const loadSessions = async () => {
-    try {      
+    try {
       if (!userId) {
         console.warn("No userId available from auth context, cannot load sessions");
-        createNewSession();
         return;
       }
+
+      if (!accessToken) {
+        console.warn("No accessToken available, cannot load sessions");
+        return;
+      }
+
+      console.log("Fetching sessions for user:", userId);
+      console.log("Using accessToken:", accessToken ? accessToken.substring(0, 15) + "..." : "missing");
       
-      const loadedSessions = await ChatbotService.fetchSessions(userId, accessToken);
-      
+      const loadedSessions = await ChatbotService.fetchSessions(
+        userId,
+        accessToken
+      );
+
+      console.log("Sessions loaded:", loadedSessions.length);
+
       if (loadedSessions.length > 0) {
+        console.log("Setting sessions state with loaded sessions");
         setSessions(loadedSessions);
-        setActiveSessionId(loadedSessions[0].id);
+        // Không set activeSessionId để hiển thị welcome container
       } else {
-        // Nếu không có dữ liệu, tạo session mới
-        createNewSession();
+        console.log("No sessions found for user");
       }
     } catch (error) {
       console.error("Error loading chat sessions:", error);
-      createNewSession();
+      
+      // Cố gắng làm mới token nếu gặp lỗi 403
+      if (error instanceof Error && error.message.includes("403")) {
+        console.log("Received 403 error, attempting to refresh token");
+        try {
+          await refreshAccessToken();
+          // Token sẽ được cập nhật trong state và useEffect sẽ kích hoạt loadSessions lại
+        } catch (refreshError) {
+          console.error("Failed to refresh token:", refreshError);
+        }
+      }
     }
   };
-
   // Tạo phiên trò chuyện mới
   const createNewSession = async (): Promise<ChatSession> => {
     try {
-      const newSession = await ChatbotService.createSession({
-        userId,
-        title: "Cuộc trò chuyện mới"
-      }, accessToken);
+      if (!userId) {
+        throw new Error("UserId not available");
+      }
+      
+      if (!accessToken) {
+        console.log("Access token missing, attempting to refresh");
+        const newToken = await refreshAccessToken();
+        if (!newToken) {
+          throw new Error("Failed to refresh access token");
+        }
+      }
+      
+      // Tạo session mới từ server
+      const newSession = await ChatbotService.createSession(
+        {
+          userId,
+          title: "Cuộc trò chuyện mới",
+        },
+        accessToken
+      );
 
       // Thêm tin nhắn chào mừng từ bot
       const welcomeMessage = ChatbotService.createWelcomeMessage(newSession.id);
@@ -70,13 +129,42 @@ const ChatbotPage: React.FC = () => {
       // Thêm tin nhắn chào mừng vào session
       newSession.messages = [welcomeMessage];
 
+      // Cập nhật state với session mới
       const updatedSessions: ChatSession[] = [newSession, ...sessions];
       setSessions(updatedSessions);
+
+      // Thiết lập session này làm active session
       setActiveSessionId(newSession.id);
+
+      console.log("New session created:", newSession.id);
+
+      // Timeout ngắn để đảm bảo UI được cập nhật đúng
+      setTimeout(() => {
+        if (chatboxRef.current) {
+          chatboxRef.current.scrollTop = chatboxRef.current.scrollHeight;
+        }
+      }, 50);
 
       return newSession;
     } catch (error) {
       console.error("Error creating new session:", error);
+      
+      // Xử lý lỗi 403
+      if (error instanceof Error && (
+          error.message.includes("403") || 
+          error.message.includes("Forbidden") ||
+          error.message.includes("token")
+        )) {
+        console.log("Auth error detected, attempting to refresh token");
+        try {
+          await refreshAccessToken();
+          // Để tránh vòng lặp vô hạn, không gọi lại createNewSession ở đây
+          // UI sẽ được cập nhật thông qua useEffect khi token được refresh
+        } catch (refreshError) {
+          console.error("Failed to refresh token:", refreshError);
+        }
+      }
+      
       throw error;
     }
   };
@@ -85,15 +173,18 @@ const ChatbotPage: React.FC = () => {
     try {
       setLoading(true);
       setActiveSessionId(sessionId);
-      
+
       // Fetch full session details including messages
-      const sessionDetail = await ChatbotService.fetchSessionDetail(sessionId, accessToken);
-      
+      const sessionDetail = await ChatbotService.fetchSessionDetail(
+        sessionId,
+        accessToken
+      );
+
       // Update the selected session with full details
-      const updatedSessions = sessions.map(session => 
+      const updatedSessions = sessions.map((session) =>
         session.id === sessionId ? sessionDetail : session
       );
-      
+
       setSessions(updatedSessions);
     } catch (error) {
       console.error("Error loading session details:", error);
@@ -105,7 +196,8 @@ const ChatbotPage: React.FC = () => {
 
   const handleDeleteSession = async (sessionId: string) => {
     if (sessionId === activeSessionId && sessions.length > 1) {
-      const newActiveIndex = sessions.findIndex((s) => s.id === sessionId) === 0 ? 1 : 0;
+      const newActiveIndex =
+        sessions.findIndex((s) => s.id === sessionId) === 0 ? 1 : 0;
       setActiveSessionId(sessions[newActiveIndex].id);
     } else if (sessionId === activeSessionId) {
       setActiveSessionId("");
@@ -113,7 +205,7 @@ const ChatbotPage: React.FC = () => {
 
     try {
       await ChatbotService.deleteSession(sessionId, userId, accessToken);
-      
+
       // Cập nhật UI
       const updatedSessions = sessions.filter((s) => s.id !== sessionId);
       setSessions(updatedSessions);
@@ -131,16 +223,27 @@ const ChatbotPage: React.FC = () => {
 
     // Nếu không có session active, tạo mới
     if (sessionIndex === -1) {
-      currentSession = await createNewSession();
-      sessionIndex = 0;
+      try {
+        currentSession = await createNewSession();
+        // Sau khi tạo session mới, cập nhật sessionIndex
+        sessionIndex = sessions.findIndex((s) => s.id === currentSession.id);
+        if (sessionIndex === -1) {
+          // Safety measure if session hasn't been added to state yet
+          sessionIndex = 0;
+        }
+      } catch (error) {
+        console.error("Error creating new session:", error);
+        return; // Thoát nếu không thể tạo session
+      }
     } else {
       currentSession = { ...sessions[sessionIndex] };
     }
 
-    // Thêm tin nhắn người dùng vào chat
+    // Thêm tin nhắn người dùng vào chat - sử dụng currentSession.id thay vì activeSessionId
+    // để đảm bảo tin nhắn được gắn với session đúng, kể cả khi session vừa được tạo
     const userMessage: Chat = formatChat({
       id: `msg-${Date.now()}-user`,
-      sessionId: activeSessionId,
+      sessionId: currentSession.id, // Đổi từ activeSessionId thành currentSession.id
       role: "user",
       content: userInput,
       timestamp: new Date(),
@@ -154,16 +257,17 @@ const ChatbotPage: React.FC = () => {
       ...currentSession,
       messages: [...existingMessages, userMessage],
       updatedAt: new Date(),
-    };
-
-    // Nếu là tin nhắn đầu tiên, cập nhật tiêu đề session
+    }; // Nếu là tin nhắn đầu tiên, cập nhật tiêu đề session
     if (existingMessages.length === 0) {
       const updatedSessions = ChatbotService.updateSessionTitle(
-        sessions, 
-        activeSessionId, 
+        sessions,
+        currentSession.id, // Sử dụng currentSession.id thay vì activeSessionId
         userInput
       );
       setSessions(updatedSessions);
+
+      // Đảm bảo activeSessionId được cập nhật
+      setActiveSessionId(currentSession.id);
     }
 
     // Cập nhật state
@@ -174,18 +278,21 @@ const ChatbotPage: React.FC = () => {
     setLoading(true);
 
     try {
-      // Ghi lại thông tin session hiện tại
-      const currentActiveSessionId = activeSessionId;
+      // Ghi lại thông tin session hiện tại - sử dụng currentSession.id
+      const currentActiveSessionId = currentSession.id;
       const isLocalSession = currentActiveSessionId.startsWith("local-");
 
       // Nếu sessionId bắt đầu bằng 'local-', gửi null để backend tạo mới
       const sessionIdToSend = isLocalSession ? null : currentActiveSessionId;
 
-      const data = await ChatbotService.sendMessage({
-        message: userInput,
-        sessionId: sessionIdToSend,
-        userId
-      }, accessToken);
+      const data = await ChatbotService.sendMessage(
+        {
+          message: userInput,
+          sessionId: sessionIdToSend,
+          userId,
+        },
+        accessToken
+      );
 
       // Cờ đánh dấu là đã xử lý phản hồi từ bot hay chưa
       let botResponseHandled = false;
@@ -193,9 +300,16 @@ const ChatbotPage: React.FC = () => {
       // *** XỬ LÝ SESSION LOCAL ĐƯỢC THAY THẾ BẰNG SESSION SERVER ***
       if (data.sessionId && isLocalSession) {
         try {
+          console.log("Fetching session details from server:", data.sessionId);
+
           // Lấy session chi tiết từ server
-          const serverSession = await ChatbotService.fetchSessionDetail(data.sessionId, accessToken);
-          
+          const serverSession = await ChatbotService.fetchSessionDetail(
+            data.sessionId,
+            accessToken
+          );
+
+          console.log("Server session details received:", serverSession);
+
           // Kiểm tra xem tin nhắn người dùng vừa gửi đã có trong dữ liệu từ server chưa
           const serverMessages = serverSession.messages || [];
           const userMessageExists = serverMessages.some(
@@ -207,8 +321,12 @@ const ChatbotPage: React.FC = () => {
 
           // Nếu server đã có tin nhắn người dùng, sử dụng messages từ server
           if (userMessageExists) {
+            console.log(
+              "User message exists in server response, using server messages"
+            );
             messagesToKeep.push(...serverMessages);
           } else {
+            console.log("Adding user message to server messages");
             // Nếu không, thêm tin nhắn người dùng hiện tại vào messages từ server
             messagesToKeep.push(...serverMessages, userMessage);
           }
@@ -222,6 +340,7 @@ const ChatbotPage: React.FC = () => {
 
           // Nếu chưa có tin nhắn bot từ server, thêm vào
           if (!botMessageExists) {
+            console.log("Adding bot response to messages");
             const botMessage: Chat = formatChat({
               id: `msg-${Date.now()}-bot`,
               sessionId: data.sessionId,
@@ -237,40 +356,96 @@ const ChatbotPage: React.FC = () => {
             ...serverSession,
             messages: messagesToKeep,
           };
-
-          // Cập nhật danh sách sessions
-          const updatedSessionsWithNewId = sessions.map((s) =>
-            s.id === currentActiveSessionId ? updatedServerSession : s
+          console.log(
+            "Updating sessions with server session:",
+            updatedServerSession
           );
 
+          // Cập nhật danh sách sessions một cách an toàn
+          const updatedSessionsWithNewId = [...sessions];
+          const sessionIndex = updatedSessionsWithNewId.findIndex(
+            (s) => s.id === currentActiveSessionId
+          );
+
+          if (sessionIndex !== -1) {
+            // Thay thế session cũ nếu tìm thấy
+            updatedSessionsWithNewId[sessionIndex] = updatedServerSession;
+          } else {
+            // Thêm mới nếu không tìm thấy session cũ
+            updatedSessionsWithNewId.unshift(updatedServerSession);
+          }
+
+          console.log(
+            "Updated sessions list length:",
+            updatedSessionsWithNewId.length
+          );
+
+          // Cập nhật state
           setSessions(updatedSessionsWithNewId);
           setActiveSessionId(data.sessionId);
+
+          // Debug: In danh sách tin nhắn cập nhật
+          console.log("Updated messages:", messagesToKeep);
 
           // Đánh dấu là đã xử lý xong
           botResponseHandled = true;
         } catch (error) {
           console.error("Error fetching session details:", error);
         }
-      }
-
-      // *** XỬ LÝ BÌNH THƯỜNG KHI ĐÃ CÓ SESSION SERVER ***
+      } // *** XỬ LÝ BÌNH THƯỜNG KHI ĐÃ CÓ SESSION SERVER ***
       if (!botResponseHandled) {
         try {
+          console.log("Processing response for existing server session");
+
           // Tải lại session mới nhất từ server
+          const sessionIdToFetch = data.sessionId || currentActiveSessionId;
+          console.log(
+            "Fetching updated session details for:",
+            sessionIdToFetch
+          );
+
           const serverSession = await ChatbotService.fetchSessionDetail(
-            data.sessionId || currentActiveSessionId, accessToken
+            sessionIdToFetch,
+            accessToken
           );
 
+          console.log("Received server session:", serverSession);
+          console.log("Messages from server:", serverSession.messages);
           // Cập nhật session trong danh sách
-          const updatedSessions = sessions.map((s) =>
-            s.id === (data.sessionId || currentActiveSessionId) ? serverSession : s
+          const updatedSessions = [...sessions];
+          const existingSessionIndex = updatedSessions.findIndex(
+            (s) => s.id === sessionIdToFetch
           );
 
+          if (existingSessionIndex !== -1) {
+            // Nếu session đã tồn tại, cập nhật nó
+            updatedSessions[existingSessionIndex] = serverSession;
+          } else {
+            // Nếu không, thêm session mới vào đầu danh sách
+            updatedSessions.unshift(serverSession);
+          }
+
+          // Đảm bảo activeSessionId được cập nhật nếu cần
+          if (data.sessionId && data.sessionId !== currentActiveSessionId) {
+            console.log("Updating active session ID to:", data.sessionId);
+            setActiveSessionId(data.sessionId);
+          }
+
+          console.log("Updating sessions state with:", updatedSessions);
+          console.log("Session count:", updatedSessions.length);
           setSessions(updatedSessions);
+
+          // Đảm bảo scroll xuống cuối sau khi cập nhật tin nhắn
+          setTimeout(() => {
+            if (chatboxRef.current) {
+              chatboxRef.current.scrollTop = chatboxRef.current.scrollHeight;
+            }
+          }, 100);
         } catch (error) {
           console.error("Error fetching updated session:", error);
 
           // Fallback: Thêm phản hồi của bot vào chat hiện tại
+          console.log("Using fallback to add bot response directly");
           const botMessage: Chat = formatChat({
             id: `msg-${Date.now()}-bot`,
             sessionId: data.sessionId || currentActiveSessionId,
@@ -280,27 +455,31 @@ const ChatbotPage: React.FC = () => {
           });
 
           // Tìm session trong danh sách hiện tại
+          const sessionIdToUpdate = data.sessionId || currentActiveSessionId;
           const updatedSessionIndex = sessions.findIndex(
-            (s) => s.id === (data.sessionId || currentActiveSessionId)
+            (s) => s.id === sessionIdToUpdate
           );
 
           if (updatedSessionIndex !== -1) {
             const updatedSessions = [...sessions];
-            const sessionToUpdate = {...updatedSessions[updatedSessionIndex]};
+            const sessionToUpdate = { ...updatedSessions[updatedSessionIndex] };
             const currentMessages = sessionToUpdate.messages || [];
+
+            console.log("Adding bot message to session:", botMessage);
 
             // Thêm tin nhắn bot vào session
             sessionToUpdate.messages = [...currentMessages, botMessage];
             sessionToUpdate.updatedAt = new Date();
 
             updatedSessions[updatedSessionIndex] = sessionToUpdate;
+            console.log("Updating sessions with fallback:", updatedSessions);
             setSessions(updatedSessions);
           }
         }
       }
     } catch (error) {
       console.error("Error sending message:", error);
-      
+
       // Hiển thị lỗi dưới dạng tin nhắn hệ thống
       const sessionIndex = sessions.findIndex((s) => s.id === activeSessionId);
       if (sessionIndex !== -1) {
@@ -313,8 +492,11 @@ const ChatbotPage: React.FC = () => {
         });
 
         const updatedSessions = [...sessions];
-        const updatedSession = {...updatedSessions[sessionIndex]};
-        updatedSession.messages = [...(updatedSession.messages || []), errorMessage];
+        const updatedSession = { ...updatedSessions[sessionIndex] };
+        updatedSession.messages = [
+          ...(updatedSession.messages || []),
+          errorMessage,
+        ];
 
         updatedSessions[sessionIndex] = updatedSession;
         setSessions(updatedSessions);
@@ -322,10 +504,40 @@ const ChatbotPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }; // Lấy tin nhắn của session đang active
+  const activeSession = activeSessionId
+    ? sessions.find((s) => s.id === activeSessionId)
+    : null;
+  const activeSessionMessages = activeSession?.messages || [];
 
-  // Lấy tin nhắn của session đang active
-  const activeSessionMessages = sessions.find((s) => s.id === activeSessionId)?.messages || [];
+  // Debug thông tin về session hiện tại
+  React.useEffect(() => {
+    if (activeSessionId) {
+      console.log("Active session ID:", activeSessionId);
+      console.log("Sessions count:", sessions.length);
+      console.log("Active session found:", activeSession ? "Yes" : "No");
+      console.log("Active session:", activeSession);
+      console.log(
+        "Active session messages count:",
+        activeSessionMessages.length
+      );
+      console.log("Active session messages:", activeSessionMessages);
+
+      // Cảnh báo nếu không tìm thấy session
+      if (!activeSession && sessions.length > 0) {
+        console.error(
+          "WARNING: Active session ID does not match any session in the list!"
+        );
+        console.log(
+          "Available session IDs:",
+          sessions.map((s) => s.id)
+        );
+      }
+    }
+  }, [activeSessionId, activeSession, activeSessionMessages, sessions.length]);
+
+  // Xác định khi nào hiển thị welcome container
+  const showWelcomeContainer = !activeSessionId;
 
   return (
     <div className="page-wrapper">
@@ -341,25 +553,39 @@ const ChatbotPage: React.FC = () => {
           <div className="chat-main">
             <div className="chat-header">
               <h2>
-                {sessions.length > 0
-                  ? sessions.find((s) => s.id === activeSessionId)?.title || "Trò chuyện mới"
-                  : "Không có cuộc trò chuyện"}
+                {activeSessionId
+                  ? sessions.find((s) => s.id === activeSessionId)?.title ||
+                    "Trò chuyện mới"
+                  : "Trợ lý AMFIE"}
               </h2>
-            </div>
+            </div>{" "}
             <div ref={chatboxRef} className="chatbox-container">
-              {sessions.length > 0 ? (
-                <ChatBox messages={activeSessionMessages} loading={loading} />
-              ) : (
-                <div className="empty-state">
-                  <p>Không có cuộc trò chuyện nào</p>
-                  <p>Vui lòng tạo cuộc trò chuyện mới để bắt đầu</p>
+              {showWelcomeContainer ? (
+                <div className="welcome-container" key="welcome-container">
+                  <div className="welcome-content">
+                    <h3>Chào mừng bạn đến với AMFIE ChatBot!</h3>
+                    <p>Tôi sẵn sàng hỗ trợ bạn với các câu hỏi về:</p>
+                    <ul>
+                      <li>Thông tin về các sản phẩm và dịch vụ</li>
+                      <li>Hướng dẫn sử dụng nền tảng</li>
+                      <li>Hỗ trợ kỹ thuật và giải quyết vấn đề</li>
+                      <li>Tư vấn tài chính cá nhân</li>
+                    </ul>
+                    <p>
+                      Hãy nhập câu hỏi của bạn vào ô bên dưới để bắt đầu trò
+                      chuyện!
+                    </p>
+                  </div>
                 </div>
+              ) : (
+                <ChatBox
+                  messages={activeSessionMessages}
+                  loading={loading}
+                  key="chat-box"
+                />
               )}
             </div>
-            <ChatInput
-              onSendMessage={handleSendMessage}
-              disabled={loading || sessions.length === 0}
-            />
+            <ChatInput onSendMessage={handleSendMessage} disabled={loading} />
           </div>
         </div>
       </div>

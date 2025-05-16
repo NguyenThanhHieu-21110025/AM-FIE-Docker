@@ -2,7 +2,7 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // Ensure this is set in your .env file
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const MODEL_NAME = "gemini-2.0-flash"; 
+const MODEL_NAME = "gemini-2.0-flash-001"; 
 
 // System prompt that defines the chatbot's purpose and capabilities
 const SYSTEM_PROMPT = process.env.SYSTEM_PROMPT;

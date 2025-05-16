@@ -72,13 +72,16 @@ class ChatbotService {
       "Content-Type": "application/json",
       token: accessToken ? `Bearer ${accessToken}` : "",
     };
-  }
-  // Tải danh sách phiên chat
+  }  // Tải danh sách phiên chat
   async fetchSessions(
     userId: string | null,
     accessToken: string | null
   ): Promise<ChatSession[]> {
     if (!userId) {
+      return [];
+    }
+
+    if (!accessToken) {
       return [];
     }
   
@@ -90,50 +93,73 @@ class ChatbotService {
       if (response.ok) {
         const sessionsData = await response.json();
         return sessionsData.map((session: any) => formatChatSession(session));
+      } else {
+        const errorText = await response.text();
+        console.error(`Failed to fetch sessions: ${response.status} ${response.statusText}`);
+        console.error(`Error details: ${errorText}`);
+        throw new Error(`${response.status} ${response.statusText}`);
       }
-      return [];
     } catch (error) {
       console.error("Error loading sessions from API:", error);
-      return [];
+      throw error;
     }
   }
-
   // Tạo phiên chat mới
   async createSession(
     { userId, title }: CreateSessionParams,
     accessToken: string | null
   ): Promise<ChatSession> {
+    if (!userId) {
+      console.warn("createSession: No userId provided");
+      throw new Error("UserId is required to create a session");
+    }
+
+    if (!accessToken) {
+      console.warn("createSession: No accessToken provided");
+      throw new Error("AccessToken is required to create a session");
+    }
+
     try {
-      if (userId) {
-        try {
-          // Tạo session mới qua API
-          const response = await fetch(`${API_BASE_URL}/sessions`, {
-            method: "POST",
-            headers: this.getAuthHeaders(accessToken),
-            body: JSON.stringify({ userId, title }),
-          });
-
-          if (response.ok) {
-            const sessionData = await response.json();
-            return formatChatSession(sessionData);
-          }
-        } catch (error) {
-          console.error("Error creating session via API:", error);
-        }
-      }
-
-      // Fallback tạo session cục bộ
-      return formatChatSession({
-        id: `local-session-${Date.now()}`,
-        title,
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        messages: [],
+      // Tạo session mới qua API
+      const response = await fetch(`${API_BASE_URL}/sessions`, {
+        method: "POST",
+        headers: this.getAuthHeaders(accessToken),
+        body: JSON.stringify({ userId, title }),
       });
+
+      if (response.ok) {
+        const sessionData = await response.json();
+        return formatChatSession(sessionData);
+      } else {
+        const errorText = await response.text();
+        console.error(`Failed to create session: ${response.status} ${response.statusText}`);
+        console.error(`Error details: ${errorText}`);
+        
+        // Nếu gặp lỗi xác thực (401, 403), ném lỗi để có thể xử lý refresh token
+        if (response.status === 401 || response.status === 403) {
+          throw new Error(`${response.status} Authentication failed: ${response.statusText}`);
+        }
+        
+        // Fallback tạo session cục bộ nếu có lỗi khác
+        return formatChatSession({
+          id: `local-session-${Date.now()}`,
+          title,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          messages: [],
+        });
+      }
     } catch (error) {
       console.error("Error creating new session:", error);
-      // Trường hợp lỗi
+      
+      // Ném lỗi lại để component có thể xử lý refresh token nếu cần
+      if (error instanceof Error && 
+          (error.message.includes("401") || error.message.includes("403"))) {
+        throw error;
+      }
+      
+      // Fallback tạo session cục bộ nếu có lỗi khác
       return formatChatSession({
         id: `local-session-${Date.now()}`,
         title,
