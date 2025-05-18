@@ -1,7 +1,6 @@
 require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
-const app = express();
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 
@@ -14,7 +13,20 @@ const exportRouter = require("./routes/exportDB.Route");
 const chatRouter = require("./routes/chatRoute");
 const notificationRouter = require("./routes/notificationRoute");
 
-const { initPinecone } = require('./services/pineconeService');
+// const { initPinecone } = require('./services/pineconeService');
+
+const app = express();
+
+
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    credentials: true,
+    exposedHeaders: ['set-cookie']
+  })
+);
+
+app.use(cookieParser());
 
 app.use(express.json());
 
@@ -33,13 +45,7 @@ mongoose
     console.log("Error connecting to MongoDB:", err);
     process.exit(1);
   });
-app.use(
-  cors({
-    origin: process.env.CORS_ORIGIN,
-    credentials: true,
-  })
-);
-app.use(cookieParser());
+
 
 app.use("/api/asset", assetRoutes);
 app.use("/api/user", userRoutes);

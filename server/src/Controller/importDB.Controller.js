@@ -1,5 +1,6 @@
 const xlsx = require('xlsx');
 const Asset = require('../models/assetModel');
+const Room = require('../models/roomModel'); // nhớ import model phòng nếu chưa có
 
 const TYPE_MAP = [
   {
@@ -29,6 +30,7 @@ const importAssets = async (req, res) => {
       const sheet = workbook.Sheets[sheetName];
       const rows = xlsx.utils.sheet_to_json(sheet, { header: 1 });
 
+      // Xác định loại tài sản (type)
       let type = null;
       for (let i = 0; i < 5; i++) {
         const line = (rows[i]?.join(' ') || '').toUpperCase();
@@ -45,17 +47,37 @@ const importAssets = async (req, res) => {
         throw new Error(`Không xác định được loại tài sản trong sheet "${sheetName}".`);
       }
 
+      // Tên phòng chính là tên sheet
+      const room = await Room.findOne({ name: sheetName });
+      if (!room) {
+        console.warn(`Không tìm thấy phòng có tên "${sheetName}", bỏ qua sheet này.`);
+        continue;
+      }
+      const location = room._id;
+
+      // Tìm header chứa tên cột "Tên tài sản" hoặc "Số hiệu tài sản"
       const headerIndex = rows.findIndex(r => r.includes("Tên tài sản") || r.includes("Số hiệu tài sản"));
       if (headerIndex === -1) continue;
 
       const dataRows = rows.slice(headerIndex + 1);
+      const excludeValues = ['A', 'B', 'C', 'D', 'E', '01', '02', '03', '04', '05', '06', '07', '08', '09', 'F', 'G'];
 
       for (const row of dataRows) {
+        // Bỏ qua dòng không có mã hoặc tên tài sản
         if (!row[1] || !row[2]) continue;
 
-        const newAsset = {
-          asset_code: row[1]?.toString().trim(),
-          asset_name: row[2]?.toString().trim(),
+        const asset_code = row[1]?.toString().trim();
+        const asset_name = row[2]?.toString().trim();
+
+        // Kiểm tra tài sản đã tồn tại chưa (dựa vào asset_code, asset_name, location, type)
+        const existingAsset = await Asset.findOne({
+          asset_code,
+          asset_name,
+          location,
+          type,
+        });
+
+        const assetData = {
           specifications: row[3]?.toString().trim(),
           year_of_use: Number(row[4]) || new Date().getFullYear(),
           accounting: {
@@ -74,9 +96,20 @@ const importAssets = async (req, res) => {
           acquisition_source: row[14]?.toString().trim() === 'DA' ? 'DA' : 'Lẻ',
           note: row[17]?.toString().trim() || '',
           type,
+          location,
         };
 
-        await Asset.create(newAsset);
+        if (existingAsset) {
+          // Cập nhật tài sản nếu đã tồn tại
+          await Asset.updateOne({ _id: existingAsset._id }, assetData);
+        } else {
+          // Tạo mới tài sản
+          await Asset.create({
+            asset_code,
+            asset_name,
+            ...assetData,
+          });
+        }
       }
     }
 

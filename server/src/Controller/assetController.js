@@ -351,7 +351,19 @@ const assetController = {
         error: error.message,
       });
     }
-  }
+  },
+  getAssetsByRoomId: async (req, res) => {
+    try {
+      const roomId = req.params.id;
+  
+      const room = await Room.findById(roomId).populate('assets');
+      if (!room) return res.status(404).json({ message: "Room not found" });
+  
+      res.status(200).json({ success: true, data: room.assets });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  },
 };
 
 

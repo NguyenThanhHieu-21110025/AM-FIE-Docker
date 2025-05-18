@@ -4,6 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import uteLogo from "../../../assets/ute-logo.png";
 import { FaWarehouse, FaUserCircle, FaChartBar, FaRobot } from "react-icons/fa";
 import { FaLocationDot } from "react-icons/fa6";
+import { useEffect, useState } from "react";
 
 interface Props {
   children: JSX.Element;
@@ -12,8 +13,46 @@ interface Props {
 const Navbar = (props: Props) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { role } = useAuth();
-
+  const { role, loading } = useAuth();
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+    // Theo dõi role và set isAdmin khi role thay đổi
+  useEffect(() => {
+    const checkAdminStatus = () => {
+      // Check role from context first
+      if (role === "admin") {
+        setIsAdmin(true);
+        // Store role in localStorage for persistence
+        localStorage.setItem("userRole", role);
+        return;
+      } 
+      
+      // If role is not admin but is something else, not admin
+      if (role && role !== "admin") {
+        setIsAdmin(false);
+        // Still store the non-admin role
+        localStorage.setItem("userRole", role);
+        return;
+      }
+      
+      // If no role in context (undefined/null), check localStorage
+      try {
+        const userRole = localStorage.getItem("userRole");
+        if (userRole === "admin") {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
+      } catch (err) {
+        console.error("Error checking local storage for role:", err);
+        setIsAdmin(false);
+      }
+    };
+    
+    if (!loading) {
+      checkAdminStatus();
+    }
+  }, [role, loading]);
+  
   const showNavbar =
     location.pathname !== "/" &&
     location.pathname !== "/login" &&
@@ -49,8 +88,7 @@ const Navbar = (props: Props) => {
             >
               <FaWarehouse size={ICON_SIZE} />
               <p>Tài sản</p>
-            </li>
-            <li
+            </li>            <li
               className={
                 location.pathname.startsWith("/room-dashboard") ? "active" : ""
               }
@@ -59,7 +97,7 @@ const Navbar = (props: Props) => {
               <FaLocationDot size={ICON_SIZE} />
               <p>Phòng</p>
             </li>
-            {role === "admin" && (
+            {isAdmin && (
               <li
                 className={
                   location.pathname.startsWith("/user-dashboard")
