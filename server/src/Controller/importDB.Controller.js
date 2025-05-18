@@ -1,7 +1,8 @@
 const xlsx = require('xlsx');
 const Asset = require('../models/assetModel');
-const Room = require('../models/roomModel'); // nhớ import model phòng nếu chưa có
+const Room = require('../models/roomModel'); 
 const { createAssetNotification } = require('./notificationController');
+const fs = require('fs');
 
 // Hàm cập nhật thông tin tổng hợp của phòng
 async function updateRoomSummary(roomId) {
@@ -223,13 +224,34 @@ const importAssets = async (req, res) => {
       
       // Cập nhật số liệu tổng hợp của phòng sau khi import xong sheet này
       await updateRoomSummary(location);
-    }    res.status(200).json({
+    }    // Xóa file tạm sau khi đã xử lý xong
+    try {
+      if (req.file && req.file.path) {
+        fs.unlinkSync(req.file.path);
+        console.log(`Đã xóa file tạm: ${req.file.path}`);
+      }
+    } catch (cleanupError) {
+      console.warn(`Không thể xóa file tạm: ${req.file.path}`, cleanupError);
+    }
+
+    res.status(200).json({
       success: true,
       message: `Import thành công ${importStats.totalAssets} tài sản (${importStats.newAssets} mới, ${importStats.updatedAssets} cập nhật) từ ${importStats.processedSheets}/${importStats.totalSheets} sheet`,
       stats: importStats
     });
   } catch (error) {
     console.error('Lỗi khi import file Excel:', error);
+    
+    // Xóa file tạm ngay cả khi xử lý bị lỗi
+    try {
+      if (req.file && req.file.path) {
+        fs.unlinkSync(req.file.path);
+        console.log(`Đã xóa file tạm: ${req.file.path}`);
+      }
+    } catch (cleanupError) {
+      console.warn(`Không thể xóa file tạm: ${req.file.path}`, cleanupError);
+    }
+    
     res.status(500).json({ success: false, message: 'Import thất bại', error: error.message });
   }
 };
