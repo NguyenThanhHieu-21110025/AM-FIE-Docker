@@ -246,18 +246,6 @@ const CreateAssetPage = () => {
     }
   }
 
-  // Handle asset type changes
-  const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setFormData((prev) => ({
-      ...prev,
-      type: e.target.value as AssetType,
-    }));
-    
-    if (errors.type) {
-      setErrors(prev => ({ ...prev, type: "" }));
-    }
-  };
-
   // Validate form before submission
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};

@@ -13,10 +13,10 @@ import { useState, useEffect, useMemo } from "react";
 import {
   FaSort,
   FaSortDown,
-  FaSortUp,
-  FaPlus,
+  FaSortUp,  FaPlus,
   FaSearch,
   FaFileExcel,
+  FaFileImport,
   FaChevronLeft,
   FaChevronRight,
   FaChevronDown,
@@ -38,6 +38,8 @@ interface Props {
   roomList?: Room[];
   onRoomSelect?: (roomId: string) => void;
   showExportButton?: boolean;
+  showImportButton?: boolean;
+  onImportClick?: () => void;
   exportEndpoint?: string;
   multiple?: boolean;
   title?: string;
@@ -50,6 +52,8 @@ const Table = ({
   roomList,
   onRoomSelect,
   showExportButton = false,
+  showImportButton = false,
+  onImportClick,
   exportEndpoint = "/export/export",
   title,
 }: Props) => {
@@ -272,6 +276,16 @@ const Table = ({
               >
                 <FaSearch size={16} />
                 <span>Tìm theo phòng</span>
+              </button>
+            )}
+
+            {showImportButton && onImportClick && (
+              <button
+                className="import-btn table-action-btn"
+                onClick={onImportClick}
+              >
+                <FaFileImport size={16} />
+                <span>Import Excel</span>
               </button>
             )}
 
