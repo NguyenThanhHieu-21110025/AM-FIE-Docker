@@ -490,11 +490,9 @@ const ChatbotPage: React.FC = () => {
                       <li>Thông tin về các sản phẩm và dịch vụ</li>
                       <li>Hướng dẫn sử dụng nền tảng</li>
                       <li>Hỗ trợ kỹ thuật và giải quyết vấn đề</li>
-                      <li>Tư vấn tài chính cá nhân</li>
                     </ul>
                     <p>
-                      Hãy nhập câu hỏi của bạn vào ô bên dưới để bắt đầu trò
-                      chuyện!
+                      Hãy nhập câu hỏi của bạn vào ô bên dưới để bắt đầu trò chuyện!
                     </p>
                   </div>
                 </div>

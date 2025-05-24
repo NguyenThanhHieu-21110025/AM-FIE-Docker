@@ -1,4 +1,4 @@
-import "../../../css/InfoPage.css";
+import "../../../css/RoomInfoPage.css";
 import { ReactNode, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -6,7 +6,7 @@ import { useMainRef, useScrollToMain } from "../../context/MainRefContext";
 import { getUserList, User } from "../../interfaces/User";
 import Loader from "../../components/Loader";
 import { useAuth } from "../../context/AuthContext";
-import { FaAngleLeft } from "react-icons/fa";
+import { FaAngleLeft, FaTable } from "react-icons/fa";
 import {
   Room,
   RoomRequest,
@@ -200,14 +200,18 @@ const RoomInfoPage = () => {
               ? `${formData.responsible_user_name}${responsibleUser?.userid ? ' - ' + responsibleUser.userid : ''}` 
               : 'Không có người chịu trách nhiệm'}
           </p>
-        </div>
-  
-        <div className="button-container">
+        </div>        <div className="button-container">
           <button className="update-btn" onClick={() => setMode("update")}>
             Cập nhật thông tin
           </button>
           <button className="delete-btn" onClick={handleDelete}>
             Xóa phòng
+          </button>          <button 
+            className="view-assets-btn" 
+            onClick={() => navigate(`/asset-dashboard?room=${id}&roomName=${encodeURIComponent(formData.fullName || formData.name)}`)}
+          >
+            <FaTable size={16} />
+            Xem tài sản phòng này
           </button>
         </div>
       </div>

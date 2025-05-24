@@ -242,6 +242,30 @@
   background-color: #f3f4f6;
 }
 
+.view-assets-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-assets-btn:hover {
+  background-color: #2563eb;
+  transform: translateY(-1px);
+}
+
+.view-assets-btn svg {
+  font-size: 16px;
+}
+
 .room-list {
   display: flex;
   flex-direction: column;

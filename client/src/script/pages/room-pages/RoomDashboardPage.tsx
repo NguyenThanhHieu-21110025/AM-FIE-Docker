@@ -65,7 +65,6 @@ const RoomDashboardPage = () => {
           data={roomList}
           columns={roomTableColumns}
           baseURL="/room-dashboard"
-          showExportButton={false} 
         />
       )}
     </main>

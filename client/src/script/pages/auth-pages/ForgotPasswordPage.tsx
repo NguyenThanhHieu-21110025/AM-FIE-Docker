@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "../../../css/AuthPages.css";
+import "../../../css/ForgotPasswordPage.css";
 import { MdOutlineEmail } from "react-icons/md";
 import { FaLock } from "react-icons/fa";
 import { IoCheckmarkCircle, IoWarning } from "react-icons/io5";

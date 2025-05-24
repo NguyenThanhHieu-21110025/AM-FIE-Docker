@@ -174,10 +174,6 @@ class ChatbotService {
     session: ChatSession,
     accessToken: string | null
   ): Promise<ChatSession> {
-    // Only process server-side sessions (not local ones)
-    if (!session.id || session.id.startsWith("local-")) {
-      throw new Error("Cannot update local session");
-    }
 
     const response = await fetch(`${API_BASE_URL}/sessions/${session.id}`, {
       method: "PUT",

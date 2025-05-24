@@ -1,19 +1,19 @@
 const VectorEmbedding = require('../models/vectorEmbeddingModel');
 
 /**
- * Generate embedding for text content
- * In production, you would integrate with an embedding model API
- * @param {string} text - Text to convert to vector embedding
+ * Tạo embedding (biểu diễn vector) cho nội dung văn bản
+ * Trong môi trường sản phẩm, bạn nên tích hợp với một API mô hình embedding
+ * @param {string} text - Văn bản cần chuyển đổi thành vector embedding
  */
 function generateEmbedding(text) {
-  // Mock implementation with random vector - replace with actual embedding API
+  // Triển khai giả lập với vector ngẫu nhiên - cần thay thế bằng API embedding thực tế
   const dimensions = 768;
   const embedding = Array(dimensions).fill(0).map(() => Math.random() - 0.5);
   return normalizeVector(embedding);
 }
 
 /**
- * Normalizes a vector to unit length
+ * Chuẩn hóa vector về độ dài đơn vị
  */
 function normalizeVector(vector) {
   const norm = Math.sqrt(vector.reduce((sum, val) => sum + val * val, 0));
@@ -21,10 +21,12 @@ function normalizeVector(vector) {
 }
 
 /**
- * Store vector embedding in MongoDB
- * @param {string} objectId - ID of the related object
+ * Lưu trữ vector embedding trong MongoDB
+ * @param {string} objectId - ID của đối tượng liên quan
+ * @param {string} objectType - Loại đối tượng
  * @param {number[]} vector - Vector embedding
- * @param {object} metadata - Additional metadata
+ * @param {string} content - Nội dung văn bản gốc
+ * @param {object} metadata - Thông tin metadata bổ sung
  */
 async function upsertVector(objectId, objectType, vector, content, metadata = {}) {
   try {
@@ -40,20 +42,20 @@ async function upsertVector(objectId, objectType, vector, content, metadata = {}
     );
     return { success: true };
   } catch (error) {
-    console.error("Error upserting vector:", error);
+    console.error("Lỗi khi cập nhật vector:", error);
     throw error;
   }
 }
 
 /**
- * Query similar vectors using MongoDB Atlas vector search
- * @param {number[]} vector - Query vector
- * @param {number} limit - Number of results to return
+ * Truy vấn các vector tương tự sử dụng MongoDB Atlas vector search
+ * @param {number[]} vector - Vector truy vấn
+ * @param {number} limit - Số lượng kết quả trả về
  */
 async function queryVector(vector, limit = 5) {
   try {
-    // Using MongoDB Atlas $vectorSearch aggregation
-    // Note: You must create a vector search index in MongoDB Atlas
+    // Sử dụng hàm tổng hợp $vectorSearch của MongoDB Atlas
+    // Lưu ý: Bạn phải tạo chỉ mục tìm kiếm vector trong MongoDB Atlas
     const results = await VectorEmbedding.aggregate([
       {
         $vectorSearch: {
@@ -63,7 +65,7 @@ async function queryVector(vector, limit = 5) {
           numCandidates: limit * 10,
           limit: limit
         }
-      },
+      }, 
       {
         $project: {
           _id: 1,
@@ -78,14 +80,14 @@ async function queryVector(vector, limit = 5) {
     
     return results;
   } catch (error) {
-    console.error("Error querying vectors:", error);
-    // Fallback to simpler query if vector search fails
+    console.error("Lỗi khi truy vấn vector:", error);
+    // Phương án dự phòng nếu tìm kiếm vector thất bại
     return [];
   }
 }
 
 /**
- * Check if system data has been indexed
+ * Kiểm tra xem dữ liệu hệ thống đã được lập chỉ mục chưa
  */
 async function checkIndexStatus() {
   try {
@@ -98,13 +100,13 @@ async function checkIndexStatus() {
     }
     return { isIndexed: false };
   } catch (error) {
-    console.error("Error checking index status:", error);
+    console.error("Lỗi khi kiểm tra trạng thái chỉ mục:", error);
     return { isIndexed: false, error: error.message };
   }
 }
 
 /**
- * Update indexing status
+ * Cập nhật trạng thái lập chỉ mục
  */
 async function updateIndexStatus(isIndexed) {
   try {
@@ -115,7 +117,7 @@ async function updateIndexStatus(isIndexed) {
       'index_status',
       'index_status',
       statusVector,
-      'System indexing status',
+      'Trạng thái lập chỉ mục hệ thống',
       {
         isIndexed,
         lastIndexed: new Date().toISOString()
@@ -124,7 +126,7 @@ async function updateIndexStatus(isIndexed) {
     
     return { success: true };
   } catch (error) {
-    console.error("Error updating index status:", error);
+    console.error("Lỗi khi cập nhật trạng thái chỉ mục:", error);
     throw error;
   }
 }

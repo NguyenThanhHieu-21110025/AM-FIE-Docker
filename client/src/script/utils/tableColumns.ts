@@ -3,6 +3,7 @@ export interface Column {
   accessorKey?: string; // Optional, since grouped columns won't have an accessorKey
   footer: string;
   columns?: Column[]; // Add support for sub-columns
+  cell?: (info: any) => any; // Add support for custom cell rendering
 }
 
 export const assetTableColumns: Column[] = [
@@ -136,7 +137,7 @@ export const userTableColumns: Column[] = [
       },
       {
         header: "Số điện thoại",
-        accessorKey: "phoneNumber",
+        accessorKey: "phoneNumber", 
         footer: "Số điện thoại",
       },
     ]
@@ -183,7 +184,6 @@ export const roomTableColumns: Column[] = [
       },
     ],
   },
-
   {
     header: "Theo sổ kế toán",
     footer: "Theo sổ kế toán",
@@ -195,17 +195,16 @@ export const roomTableColumns: Column[] = [
       },
       {
         header: "Nguyên giá",
-        accessorKey: "accountingRecords.originalValue",
+        accessorKey: "accountingRecords.originalValue_formatted",
         footer: "Nguyên giá",
       },
       {
         header: "Giá trị còn lại",
-        accessorKey: "accountingRecords.currentValue",
+        accessorKey: "accountingRecords.currentValue_formatted",
         footer: "Giá trị còn lại",
       },
     ],
   },
-
   {
     header: "Theo kiểm kê thực tế",
     footer: "Kiểm kê thực tế",
@@ -217,17 +216,16 @@ export const roomTableColumns: Column[] = [
       },
       {
         header: "Nguyên giá",
-        accessorKey: "physicalCount.originalValue",
+        accessorKey: "physicalCount.originalValue_formatted",
         footer: "Nguyên giá",
       },
       {
         header: "Giá trị còn lại",
-        accessorKey: "physicalCount.currentValue",
+        accessorKey: "physicalCount.currentValue_formatted",
         footer: "Giá trị còn lại",
       },
     ],
   },
-
   {
     header: "Chênh lệch",
     footer: "Chênh lệch",
@@ -239,12 +237,12 @@ export const roomTableColumns: Column[] = [
       },
       {
         header: "Nguyên giá",
-        accessorKey: "discrepancy.originalValue",
+        accessorKey: "discrepancy.originalValue_formatted",
         footer: "Nguyên giá",
       },
       {
         header: "Giá trị còn lại",
-        accessorKey: "discrepancy.currentValue",
+        accessorKey: "discrepancy.currentValue_formatted",
         footer: "Giá trị còn lại",
       },
     ],

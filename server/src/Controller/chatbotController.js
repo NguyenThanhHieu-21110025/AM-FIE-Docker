@@ -20,25 +20,25 @@ class ChatbotController {
     this.ensureSystemDataIndexed();
   }
 
-  // Khởi tạo và đảm bảo dữ liệu hệ thống được đánh chỉ mục trong Pinecone
+  // Khởi tạo và đảm bảo dữ liệu hệ thống được Indexed trong Pinecone
   async ensureSystemDataIndexed() {
     try {
       const indexStatus = await this.vectorService.checkIndexStatus();
   
-      // Nếu chỉ mục chưa được tạo, hoặc cần tái tạo, thực hiện đánh chỉ mục
+      // Nếu chỉ mục chưa được tạo, hoặc cần tái tạo, thực hiện Indexed
       if (!indexStatus.isIndexed) {
         console.log("Indexing system data in MongoDB Atlas...");
   
-        // Đánh chỉ mục tất cả dữ liệu tài sản
+        // Indexed tất cả dữ liệu tài sản
         await this.indexAllAssets();
   
-        // Đánh chỉ mục tất cả dữ liệu phòng
+        // Indexed dữ liệu phòng
         await this.indexAllRooms();
   
-        // Đánh chỉ mục tất cả dữ liệu người dùng
+        // Indexed tất cả dữ liệu người dùng
         await this.indexAllUsers();
   
-        // Cập nhật trạng thái đánh chỉ mục
+        // Cập nhật trạng thái Indexed
         await this.vectorService.updateIndexStatus(true);
         console.log("System data indexing completed.");
       }

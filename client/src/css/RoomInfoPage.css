@@ -1,0 +1,338 @@
+/* ========== 1. THEME VARIABLES ========== */
+:root {
+  /* Color palette - Light theme */
+  --color-background: #f9fafb;
+  --color-white: #ffffff;
+  --color-surface-light: #f3f4f6;
+  --color-surface: #e5e7eb;
+  --color-border: #e5e7eb;
+  --color-border-focus: #a5b4fc;
+  
+  /* Text colors */
+  --color-text-primary: #111827;
+  --color-text-secondary: #374151;
+  --color-text-tertiary: #6b7280;
+  
+  /* Accent colors */
+  --color-primary: #4f46e5;
+  --color-primary-light: #e0e7ff;
+  --color-success: #10b981;
+  --color-success-light: #ecfdf5;
+  --color-danger: #ef4444;
+  --color-danger-light: #fef2f2;
+  --color-warning: #f59e0b;
+  --color-warning-light: #fffbeb;
+  
+  /* Spacing scale */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  /* Transitions */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+}
+
+/* Dark theme variable overrides */
+.dark {
+  --color-background: #09090b; /* slate-950 */
+  --color-white: #1c1c24; /* slate-900 */
+  --color-surface-light: #17171d; /* slate-850 */
+  --color-surface: #27272e; /* slate-800 */
+  --color-border: #27272e; /* slate-800 */
+  --color-border-focus: #818cf8; /* indigo-400 */
+  
+  --color-text-primary: #f1f5f9; /* slate-100 */
+  --color-text-secondary: #e2e8f0; /* slate-200 */
+  --color-text-tertiary: #94a3b8; /* slate-400 */
+  
+  --color-primary: #6366f1; /* indigo-500 */
+  --color-primary-light: #1e1b4b; /* indigo-950 */
+  --color-success: #10b981; /* emerald-500 */
+  --color-success-light: #064e3b; /* emerald-950 */
+  --color-danger: #ef4444; /* red-500 */
+  --color-danger-light: #450a0a; /* red-950 */
+  --color-warning: #f59e0b; /* amber-500 */
+  --color-warning-light: #451a03; /* amber-950 */
+}
+
+/* ========== 2. BASE LAYOUT ========== */
+.info-page {
+  min-height: 100vh;
+  width: 100%;
+  background-color: var(--color-background);
+  padding: var(--spacing-xl) 0;
+}
+
+.info-page .container {
+  width: 1200px;
+  max-width: 95%;
+  padding: var(--spacing-xl);
+  background-color: var(--color-white);
+  color: var(--color-text-primary);
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin: auto;
+  height: fit-content;
+  transition: all var(--transition-fast);
+}
+
+.info-body {
+  font-size: 15px;
+  font-weight: 400;
+  padding: 0 var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+/* ========== 3. TYPOGRAPHY ========== */
+.info-page .title {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-xl);
+  letter-spacing: -0.01em;
+}
+
+.info-page .info-header {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  margin-bottom: var(--spacing-xs);
+  font-size: 14px;
+}
+
+/* ========== 4. FORM ELEMENTS ========== */
+/* Form inputs */
+.info-page input,
+.info-page select,
+.info-page textarea {
+  background-color: var(--color-white);
+  color: var(--color-text-primary);
+  font-size: 15px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  width: 100%;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.info-page input:focus,
+.info-page select:focus,
+.info-page textarea:focus {
+  outline: none;
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 2px rgba(165, 180, 252, 0.2);
+}
+
+.info-page input[disabled],
+.info-page select[disabled],
+.info-page textarea[disabled] {
+  background-color: var(--color-surface-light);
+  color: var(--color-text-tertiary);
+  cursor: not-allowed;
+  border-color: var(--color-border);
+  opacity: 0.75;
+}
+
+/* Paragraph styling for read-only mode */
+.info-page .long-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.info-page .long-info p {
+  background-color: var(--color-white);
+  color: var(--color-text-primary);
+  font-size: 15px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  width: 100%;
+  min-height: 38px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.info-page .long-info p:empty::before {
+  content: "Không có";
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+/* ========== 5. BUTTON STYLES ========== */
+.info-page .button-container {
+  padding: var(--spacing-xl) 0 var(--spacing-md) 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-md);
+}
+
+/* Common button styles */
+.info-page .button-container button {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 500;
+  transition: background-color var(--transition-fast);
+  border: none;
+  color: var(--color-white);
+  cursor: pointer;
+}
+
+/* Button variants */
+.info-page .submit-btn {
+  background-color: var(--color-success);
+}
+
+.info-page .submit-btn:hover {
+  background-color: #0ea572;
+}
+
+.info-page .update-btn {
+  background-color: var(--color-primary);
+}
+
+.info-page .update-btn:hover {
+  background-color: #4338ca;
+}
+
+.info-page .delete-btn {
+  background-color: var(--color-danger);
+}
+
+.info-page .delete-btn:hover {
+  background-color: #dc2626;
+}
+
+.info-page .cancel-btn {
+  background-color: var(--color-text-tertiary);
+}
+
+.info-page .cancel-btn:hover {
+  background-color: #4b5563;
+}
+
+/* Back button */
+.info-page .back-button {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  gap: var(--spacing-sm);
+  font-size: 15px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-sm);
+}
+
+.info-page .back-button:hover {
+  color: var(--color-primary);
+  background-color: var(--color-surface-light);
+}
+
+/* ========== 6. DARK MODE OVERRIDES ========== */
+/* Dark mode input styling */
+.dark .info-page input,
+.dark .info-page select,
+.dark .info-page textarea {
+  background-color: #17171d; /* slate-850 */
+  border-color: #3f3f46; /* zinc-700 */
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.dark .info-page input:focus,
+.dark .info-page select:focus,
+.dark .info-page textarea:focus {
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2), 
+              inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.dark .info-page input[disabled],
+.dark .info-page select[disabled],
+.dark .info-page textarea[disabled] {
+  background-color: #09090b; /* slate-950 */
+  color: #64748b; /* slate-500 */
+  border-color: #27272e; /* slate-800 */
+}
+
+/* Dark mode paragraph styling */
+.dark .info-page .long-info p {
+  background-color: #17171d; /* slate-850 */
+  color: var(--color-text-primary);
+  border: 1px solid #3f3f46; /* zinc-700 */
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+/* Dark mode button styling */
+.dark .info-page .submit-btn {
+  background-color: #059669; /* emerald-600 */
+}
+
+.dark .info-page .submit-btn:hover {
+  background-color: #10b981; /* emerald-500 */
+}
+
+.dark .info-page .update-btn {
+  background-color: #4f46e5; /* indigo-600 */
+}
+
+.dark .info-page .update-btn:hover {
+  background-color: #6366f1; /* indigo-500 */
+}
+
+.dark .info-page .delete-btn {
+  background-color: #dc2626; /* red-600 */
+}
+
+.dark .info-page .delete-btn:hover {
+  background-color: #ef4444; /* red-500 */
+}
+
+.dark .info-page .cancel-btn {
+  background-color: #4b5563; /* gray-600 */
+}
+
+.dark .info-page .cancel-btn:hover {
+  background-color: #6b7280; /* gray-500 */
+}
+
+/* Dark mode back button */
+.dark .info-page .back-button:hover {
+  color: #6366f1; /* indigo-500 */
+  background-color: #17171d; /* slate-850 */
+}
+
+/* ========== 7. MEDIA QUERIES ========== */
+@media (max-width: 768px) {
+  .info-page .container {
+    padding: var(--spacing-md);
+  }
+  
+  .info-body {
+    padding: 0;
+  }
+  
+  .info-page .button-container {
+    flex-direction: column;
+  }
+  
+  .info-page .button-container button {
+    width: 100%;
+  }
+}

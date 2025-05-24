@@ -36,7 +36,7 @@ const assetsSchema = new mongoose.Schema({
     },
     year_of_use: {
         type: Number,
-        required: true, // Đảm bảo năm sử dụng được cung cấp, năm bắt đầu sử dụng
+        required: true,
         description: "Năm sử dụng"
     },
     accounting: {

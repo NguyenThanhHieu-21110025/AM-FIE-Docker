@@ -1,21 +1,25 @@
 import "../../../css/DashboardPage.css";
+import { useState, useRef, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { useMainRef, useScrollToMain } from "../../context/MainRefContext";
-import Table from "../../components/Table";
-import { assetTableColumns } from "../../utils/tableColumns";
-import Loader from "../../components/Loader";
-import { useState, useRef } from "react";
 import { useUserList, useRoomList, useAssetList } from "../../hooks/useAsset";
-import Modal from "../../components/Modal";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../hooks/useToast";
+import Table from "../../components/Table";
+import Loader from "../../components/Loader";
+import Modal from "../../components/Modal";
+import { assetTableColumns } from "../../utils/tableColumns";
 
-/**
- * Trang Dashboard hiển thị danh sách tài sản
- */
 const AssetDashboardPage = () => {
+  // Refs
   const mainRef = useMainRef();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Page state
+  const [pageTitle, setPageTitle] = useState<string>("Danh Sách Tài Sản");
   const [selectedRoom, setSelectedRoom] = useState<string>("");
+  
+  // Import modal state
   const [showImportModal, setShowImportModal] = useState<boolean>(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState<boolean>(false);
@@ -23,11 +27,14 @@ const AssetDashboardPage = () => {
     success: boolean;
     message: string;
   } | null>(null);
+  
+  // Hooks
   const { accessToken, refreshAccessToken } = useAuth();
   const { showToast } = useToast();
+  const location = useLocation();
+  
   useScrollToMain();
-
-  // Sử dụng custom hooks để lấy dữ liệu
+  // Data fetching hooks
   const { data: userList, isLoading: isLoadingUser } = useUserList();
   const { data: roomList, isLoading: isLoadingRoom } = useRoomList(userList);
   const {
@@ -35,10 +42,54 @@ const AssetDashboardPage = () => {
     isLoading: isLoadingAsset,
     refetch: refetchAssets,
   } = useAssetList(userList, roomList);
-  // Xử lý khi chọn file
+  
+  // Parse URL query params to set room and title
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const roomId = searchParams.get('room');
+    const roomName = searchParams.get('roomName');
+    
+    if (roomId) {
+      setSelectedRoom(roomId);
+    }
+    
+    if (roomName) {
+      setPageTitle(`Danh Sách Tài Sản Phòng ${roomName}`);
+    } else {
+      setPageTitle("Danh Sách Tài Sản");
+    }
+  }, [location.search]);
+  
+  // Update title when rooms are selected from the room selection modal
+  useEffect(() => {
+    // Skip if selection came from URL query parameters
+    if (location.search.includes('room=')) return;
+    
+    if (!selectedRoom || selectedRoom === "") {
+      setPageTitle("Danh Sách Tài Sản");
+      return;
+    }
+    
+    const selectedRoomIds = selectedRoom.split(',');
+    
+    // Only update title if rooms were selected from the modal (multiple rooms)
+    if (selectedRoomIds.length > 0 && roomList) {
+      const roomNames = selectedRoomIds
+        .map(id => roomList.find(room => room._id === id)?.fullName || roomList.find(room => room._id === id)?.name)
+        .filter(Boolean);
+      
+      if (roomNames.length > 0) {
+        setPageTitle(`Danh Sách Tài Sản Phòng ${roomNames.join(', ')}`);
+      } else {
+        setPageTitle("Danh Sách Tài Sản");
+      }
+    }
+  }, [selectedRoom, roomList, location.search]);  /**
+   * Handle file selection for import
+   * Only accept Excel files (.xls, .xlsx)
+   */
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      // Chỉ chấp nhận file Excel
       const file = e.target.files[0];
       const validExcelTypes = [
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -59,7 +110,10 @@ const AssetDashboardPage = () => {
     }
   };
 
-  // Xử lý khi ấn nút import
+  /**
+   * Handle import action
+   * Upload Excel file to server and process the data
+   */
   const handleImport = async () => {
     if (!importFile) {
       showToast("Vui lòng chọn file Excel", "error");
@@ -69,7 +123,7 @@ const AssetDashboardPage = () => {
     try {
       setIsImporting(true);
 
-      // Lấy token mới nếu cần
+      // Get fresh token if needed
       let token = accessToken;
       if (!token) {
         token = await refreshAccessToken();
@@ -78,11 +132,11 @@ const AssetDashboardPage = () => {
         }
       }
 
-      // Tạo FormData để gửi file
+      // Create FormData to send file
       const formData = new FormData();
       formData.append("file", importFile);
 
-      // Gọi API import
+      // Call import API
       const response = await fetch(
         `${import.meta.env.VITE_API_URL}/import/import`,
         {
@@ -98,20 +152,22 @@ const AssetDashboardPage = () => {
 
       if (!response.ok) {
         throw new Error(data.message || "Import thất bại");
-      } // Hiển thị thông báo thành công với chi tiết
+      } 
+      
+      // Show success message
       setImportResult({
         success: true,
         message: data.message || "Import thành công!",
       });
       showToast(data.message || "Import thành công!", "success");
 
-      // Đóng modal và reset form
+      // Close modal and reset form
       setTimeout(() => {
         setShowImportModal(false);
         setImportFile(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
 
-        // Reload lại danh sách tài sản
+        // Reload asset list
         refetchAssets();
       }, 1500);
     } catch (error) {
@@ -119,7 +175,7 @@ const AssetDashboardPage = () => {
       let errorMsg =
         error instanceof Error ? error.message : "Lỗi không xác định";
 
-      // Try to extract more detailed error message from API response
+      // Extract more detailed error message from API response
       if (error instanceof Error && error.message.includes("fetch")) {
         errorMsg =
           "Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.";
@@ -131,37 +187,49 @@ const AssetDashboardPage = () => {
       setIsImporting(false);
     }
   };
-
-  // Lọc tài sản theo phòng được chọn
+  /**
+   * Filter assets based on selected room
+   */
   const filteredAssets = assetList?.filter((asset) => {
-    if (!selectedRoom) return true; // Hiển thị tất cả tài sản khi không có phòng nào được chọn
+    if (!selectedRoom) return true; // Show all assets when no room is selected
 
     const selectedRoomIds = selectedRoom ? selectedRoom.split(",") : [];
 
-    // Xử lý cả kiểu đối tượng và chuỗi
+    // Handle both object and string location types
     const locationId =
       typeof asset.location === "object"
         ? asset.location?._id ?? ""
         : asset.location ?? "";
 
-    // Hiển thị tài sản nếu vị trí của nó khớp với bất kỳ phòng nào được chọn
+    // Show asset if its location matches any selected room
     return selectedRoomIds.includes(locationId);
   });
 
+  // Determine if we're in a loading state
   const isLoading =
     isLoadingAsset ||
     isLoadingRoom ||
     isLoadingUser ||
     typeof assetList === "undefined";
 
+  /**
+   * Reset the import modal state
+   */
+  const resetImportModal = () => {
+    setShowImportModal(false);
+    setImportFile(null);
+    setImportResult(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   return (
     <main className="dashboard-page" ref={mainRef}>
-      {" "}
       <div className="dashboard-header">
         <div className="title-section">
-          <h1 className="title">Danh Sách Tài Sản</h1>
+          <h1 className="title">{pageTitle}</h1>
         </div>
       </div>
+      
       {isLoading ? (
         <Loader />
       ) : (
@@ -177,16 +245,12 @@ const AssetDashboardPage = () => {
           exportEndpoint="/export/export"
         />
       )}
-      {/* Modal Import Excel */}
+      
+      {/* Import Excel Modal */}
       {showImportModal && (
         <Modal
           title="Import dữ liệu từ Excel"
-          onClose={() => {
-            setShowImportModal(false);
-            setImportFile(null);
-            setImportResult(null);
-            if (fileInputRef.current) fileInputRef.current.value = "";
-          }}
+          onClose={resetImportModal}
         >
           <div className="import-modal-content">
             <div className="import-instructions">
@@ -202,6 +266,7 @@ const AssetDashboardPage = () => {
                 </li>
               </ol>
             </div>
+            
             <div className="file-input-container">
               <input
                 type="file"
@@ -210,7 +275,7 @@ const AssetDashboardPage = () => {
                 ref={fileInputRef}
                 className="file-input"
                 disabled={isImporting}
-              />{" "}
+              />
               <div className="selected-file">
                 {importFile ? (
                   <>
@@ -224,6 +289,7 @@ const AssetDashboardPage = () => {
                 )}
               </div>
             </div>
+            
             {importResult && (
               <div
                 className={`import-result ${
@@ -234,19 +300,15 @@ const AssetDashboardPage = () => {
                 {importResult.message}
               </div>
             )}
+            
             <div className="import-actions">
               <button
                 className="cancel-btn"
-                onClick={() => {
-                  setShowImportModal(false);
-                  setImportFile(null);
-                  setImportResult(null);
-                  if (fileInputRef.current) fileInputRef.current.value = "";
-                }}
+                onClick={resetImportModal}
                 disabled={isImporting}
               >
                 Hủy
-              </button>{" "}
+              </button>
               <button
                 className="import-submit-btn"
                 onClick={handleImport}

@@ -1,4 +1,5 @@
 import { getUserById, User } from "./User";
+import { formatPrice } from "../utils/formatPrice";
 
 export interface Room {
   _id: string;
@@ -14,6 +15,39 @@ export interface Room {
   __v: string;
   responsible_user_name: string;
   note: string;
+  
+  // Thông tin kế toán
+  accountingRecords?: {
+    quantity: number;
+    originalValue: number;
+    currentValue: number;
+    originalValue_formatted?: string;
+    currentValue_formatted?: string;
+  };
+  
+  // Thông tin kiểm kê thực tế
+  physicalCount?: {
+    quantity: number;
+    originalValue: number;
+    currentValue: number;
+    originalValue_formatted?: string;
+    currentValue_formatted?: string;
+  };
+  
+  // Thông tin chênh lệch
+  discrepancy?: {
+    quantity: number;
+    originalValue: number;
+    currentValue: number;
+    originalValue_formatted?: string;
+    currentValue_formatted?: string;
+  };
+  
+  // Lý do
+  reason?: {
+    lost: string;
+    disposed: string;
+  };
 }
 
 export type RoomRequest = Omit<Room, "responsible_user_name">;
@@ -37,6 +71,24 @@ export async function getRoomList(token: string, userList: User[]) {
         userList.find((user) => user._id === room.responsible_user)?.name ||
         "N/A";
     }
+    
+    // Format price values for accountingRecords
+    if (room.accountingRecords) {
+      room.accountingRecords.originalValue_formatted = formatPrice(room.accountingRecords.originalValue || 0);
+      room.accountingRecords.currentValue_formatted = formatPrice(room.accountingRecords.currentValue || 0);
+    }
+    
+    // Format price values for physicalCount
+    if (room.physicalCount) {
+      room.physicalCount.originalValue_formatted = formatPrice(room.physicalCount.originalValue || 0);
+      room.physicalCount.currentValue_formatted = formatPrice(room.physicalCount.currentValue || 0);
+    }
+    
+    // Format price values for discrepancy
+    if (room.discrepancy) {
+      room.discrepancy.originalValue_formatted = formatPrice(room.discrepancy.originalValue || 0);
+      room.discrepancy.currentValue_formatted = formatPrice(room.discrepancy.currentValue || 0);
+    }
   });
   
   return data;
@@ -58,6 +110,24 @@ export async function getRoomById(id: string, token: string) {
     data.responsible_user_name = responsible_user.name;
   }
   
+  // Format price values for accountingRecords
+  if (data.accountingRecords) {
+    data.accountingRecords.originalValue_formatted = formatPrice(data.accountingRecords.originalValue || 0);
+    data.accountingRecords.currentValue_formatted = formatPrice(data.accountingRecords.currentValue || 0);
+  }
+  
+  // Format price values for physicalCount
+  if (data.physicalCount) {
+    data.physicalCount.originalValue_formatted = formatPrice(data.physicalCount.originalValue || 0);
+    data.physicalCount.currentValue_formatted = formatPrice(data.physicalCount.currentValue || 0);
+  }
+  
+  // Format price values for discrepancy
+  if (data.discrepancy) {
+    data.discrepancy.originalValue_formatted = formatPrice(data.discrepancy.originalValue || 0);
+    data.discrepancy.currentValue_formatted = formatPrice(data.discrepancy.currentValue || 0);
+  }
+  
   return data;
 }
 
@@ -70,10 +140,8 @@ export async function createRoom(room: RoomRequest, token: string) {
         token: `Bearer ${token}`,
       },
       body: JSON.stringify(room),
-    };
-
-    const res = await fetch(`${HANDLE_ROOM_URL}`, requestInit);
-    const data = await res.json();
+    };    const res = await fetch(`${HANDLE_ROOM_URL}`, requestInit);
+    // Check if the request was successful
     return res.ok;
   } catch (error) {
     console.log(error);
